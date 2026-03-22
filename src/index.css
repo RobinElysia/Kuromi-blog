@@ -1,2 +1,42 @@
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
+
+@keyframes arcFlow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -88;
+  }
+}
+
+@keyframes acrylicPulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow:
+      0 0 12px rgba(255, 255, 255, 0.35),
+      0 0 30px rgba(248, 113, 185, 0.35);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    box-shadow:
+      0 0 16px rgba(255, 255, 255, 0.46),
+      0 0 38px rgba(34, 211, 238, 0.48);
+  }
+}
+
+.arc-flow {
+  animation: arcFlow 2.8s linear infinite;
+}
+
+.acrylic-dot {
+  animation: acrylicPulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arc-flow,
+  .acrylic-dot {
+    animation: none;
+  }
+}

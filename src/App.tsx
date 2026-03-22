@@ -48,6 +48,7 @@ function resolveRoute(pathname: string): AppRoute {
   }
 
   if (pathname === "/editor") return { type: "editor" };
+  if (pathname === "/posts") return { type: "placeholder", title: "帖子页面" };
   if (pathname === "/tags") return { type: "placeholder", title: "标签页面" };
   if (pathname === "/friends") return { type: "placeholder", title: "友链页面" };
   return { type: "home" };

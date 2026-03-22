@@ -1,8 +1,12 @@
 node_modules/
 build/
 dist/
+.agent/
+.claude/
+.vscode/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
+require.md

@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import ReactMarkdown from "react-markdown";
+﻿import React, { useEffect, useMemo, useState } from "react";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -67,12 +67,17 @@ function MermaidBlock({ chart }: MermaidBlockProps) {
 
 export default function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   const markdown = useMemo(() => content || "", [content]);
+  const allowDataImage = (url: string) => /^data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\s]+$/.test(url);
 
   return (
     <article className={className}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
+        urlTransform={(url, key) => {
+          if (key === "src" && allowDataImage(url)) return url;
+          return defaultUrlTransform(url);
+        }}
         components={{
           code({ className: codeClassName, children, ...props }) {
             const text = String(children ?? "");

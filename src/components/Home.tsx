@@ -1,6 +1,5 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { User, Post } from "../types";
-import MarkdownRenderer from "./MarkdownRenderer";
 
 interface HomeProps {
   user: User;
@@ -13,7 +12,6 @@ interface HomeProps {
 
 const SITE_STARTED_AT = new Date("2026-03-08T00:00:00+08:00");
 const LEFT_AVATAR = new URL("../public/kuromi/1x1/illust_1.png", import.meta.url).href;
-const TIMELINE_BANNER = new URL("../public/kuromi/16x9/PJL_05.png", import.meta.url).href;
 const ADMIN_SET = new Set(["RobinElysia", "Meow"]);
 
 function formatDateTime(value: string) {
@@ -36,11 +34,33 @@ function resolvePostTitle(post: Post) {
   return fallback || "无标题帖子";
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function toExcerpt(content: string, maxLength = 180) {
+  const plain = content
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/\[[^\]]+\]\([^)]*\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/[>*_~|-]/g, " ")
+    .replace(/\$\$?[\s\S]*?\$\$?/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!plain) return "（暂无正文预览）";
+  if (plain.length <= maxLength) return plain;
+  return `${plain.slice(0, maxLength)}…`;
+}
+
 export default function Home({ user, search, onLogout, onChangeWallpaper, onOpenPost, onOpenEditor }: HomeProps) {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
-  const [submittingCommentId, setSubmittingCommentId] = useState<number | null>(null);
   const [runtimeText, setRuntimeText] = useState(() => formatRuntime(new Date()));
+  const [scrollRatio, setScrollRatio] = useState(0);
+  const [isDraggingDot, setIsDraggingDot] = useState(false);
+  const arcRef = useRef<HTMLDivElement>(null);
 
   const fetchPosts = async () => {
     try {
@@ -65,30 +85,60 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
     return () => window.clearInterval(timer);
   }, []);
 
-  const handleSubmitComment = async (postId: number) => {
-    const commentText = commentInputs[postId]?.trim();
-    if (!commentText) return;
-
-    setSubmittingCommentId(postId);
-    try {
-      const res = await fetch(`/api/posts/${postId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          author: user.username,
-          content: commentText,
-        }),
-      });
-
-      if (res.ok) {
-        setCommentInputs((prev) => ({ ...prev, [postId]: "" }));
-        fetchPosts();
+  useEffect(() => {
+    const updateScrollRatio = () => {
+      const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
+      if (maxScroll === 0) {
+        setScrollRatio(0);
+        return;
       }
-    } catch (err) {
-      console.error("Failed to create comment:", err);
-    } finally {
-      setSubmittingCommentId(null);
-    }
+      setScrollRatio(window.scrollY / maxScroll);
+    };
+
+    updateScrollRatio();
+    window.addEventListener("scroll", updateScrollRatio, { passive: true });
+    window.addEventListener("resize", updateScrollRatio, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", updateScrollRatio);
+      window.removeEventListener("resize", updateScrollRatio);
+    };
+  }, []);
+
+  const scrollToRatio = (ratio: number) => {
+    const nextRatio = clamp(ratio, 0, 1);
+    const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
+    window.scrollTo({ top: maxScroll * nextRatio, behavior: "auto" });
+  };
+
+  const updateByClientY = (clientY: number) => {
+    const arc = arcRef.current;
+    if (!arc) return;
+    const rect = arc.getBoundingClientRect();
+    const ratio = (clientY - rect.top) / rect.height;
+    scrollToRatio(ratio);
+  };
+
+  const handleArcPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    updateByClientY(event.clientY);
+  };
+
+  const handleDotPointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    setIsDraggingDot(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      updateByClientY(moveEvent.clientY);
+    };
+
+    const onPointerUp = () => {
+      setIsDraggingDot(false);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
   };
 
   const filteredPosts = useMemo(() => {
@@ -96,24 +146,18 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
     if (!keyword) return posts;
 
     return posts.filter((post) => {
-      const combined = `${resolvePostTitle(post)} ${post.author} ${post.content}`.toLowerCase();
+      const combined = `${resolvePostTitle(post)} ${post.author} ${post.content} ${(post.tags ?? []).join(" ")}`.toLowerCase();
       return combined.includes(keyword);
     });
   }, [posts, search]);
 
-  const timelineItems = useMemo(
-    () =>
-      filteredPosts.map((post) => ({
-        id: post.id,
-        title: resolvePostTitle(post),
-        createdAt: post.createdAt,
-      })),
-    [filteredPosts]
-  );
+  const dotY = 20 + 272 * scrollRatio;
+  const arcBend = 64;
+  const dotX = 72 - arcBend * 4 * scrollRatio * (1 - scrollRatio);
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto grid w-full max-w-[1500px] gap-5 lg:grid-cols-[320px_minmax(0,1fr)_320px]">
+      <div className="mx-auto grid w-full max-w-[1500px] gap-5 lg:grid-cols-[320px_minmax(0,1fr)_220px]">
         <aside className="rounded-3xl border border-slate-100/20 bg-slate-950/70 p-5 shadow-[0_18px_40px_rgba(12,20,36,0.5)] backdrop-blur-md lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:overflow-auto">
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200/20">
             <img src={LEFT_AVATAR} alt="avatar" className="h-48 w-full object-cover" />
@@ -126,7 +170,7 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
             <p className="rounded-xl border border-slate-200/15 bg-slate-900/70 p-3">
               当前用户: <span className="font-semibold text-cyan-100">{user.username}</span>
             </p>
-            <p className="rounded-xl border border-slate-200/15 bg-slate-900/70 p-3">建站时间: 3.8</p>
+            <p className="rounded-xl border border-slate-200/15 bg-slate-900/70 p-3">建站时间: 2026-03-08</p>
             <p className="rounded-xl border border-slate-200/15 bg-slate-900/70 p-3">运行时间: {runtimeText}</p>
             <p className="rounded-xl border border-slate-200/15 bg-slate-900/70 p-3">
               我们没有注册功能，因为只有 RobinElysia 和 Meow 管理本站；访客模式可进入浏览与评论。
@@ -188,55 +232,21 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
                 </button>
               </div>
 
-              <MarkdownRenderer
-                content={post.content}
-                className="prose prose-invert max-w-none text-slate-100 prose-headings:text-rose-100 prose-strong:text-orange-100 prose-p:text-slate-100/90"
-              />
-
-              <div className="mt-5 border-t border-slate-200/15 pt-4">
-                <p className="mb-3 text-sm text-slate-200">评论（{post.comments?.length ?? 0}）</p>
-
-                <div className="space-y-3">
-                  {(post.comments ?? []).map((comment) => (
-                    <div key={comment.id} className="rounded-xl border border-slate-200/15 bg-slate-800/40 px-3 py-2">
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <p className="text-xs font-medium text-cyan-100">{comment.author}</p>
-                        <p className="text-[11px] text-slate-300/70">{formatDateTime(comment.createdAt)}</p>
-                      </div>
-                      <p className="whitespace-pre-wrap text-sm text-slate-100/90">{comment.content}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-3 flex gap-2">
-                    <input
-                      value={commentInputs[post.id] ?? ""}
-                    onChange={(e) =>
-                      setCommentInputs((prev) => ({
-                        ...prev,
-                        [post.id]: e.target.value,
-                      }))
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleSubmitComment(post.id);
-                      }
-                    }}
-                      placeholder="写下你的评论…"
-                      aria-label={`帖子 ${post.id} 评论输入框`}
-                      className="flex-1 rounded-xl border border-slate-200/25 bg-slate-900/65 px-3 py-2 text-base text-slate-100 placeholder:text-slate-300/55 outline-none transition focus:border-orange-200/50 focus:ring-1 focus:ring-orange-200/50 sm:text-sm"
-                    />
-                  <button
-                    type="button"
-                    onClick={() => handleSubmitComment(post.id)}
-                    disabled={submittingCommentId === post.id || !commentInputs[post.id]?.trim()}
-                    className="rounded-xl bg-gradient-to-r from-orange-300 to-rose-300 px-4 py-2 text-sm font-semibold text-slate-900 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55"
-                  >
-                    发送
-                  </button>
-                </div>
+              <div className="mb-3 flex flex-wrap gap-2">
+                {(post.tags ?? []).map((tag) => (
+                  <span key={`${post.id}-${tag}`} className="rounded-full border border-cyan-200/35 bg-cyan-200/10 px-2.5 py-1 text-xs text-cyan-100">
+                    #{tag}
+                  </span>
+                ))}
+                {(post.tags ?? []).length === 0 && <span className="text-xs text-slate-400/80">#未分类</span>}
               </div>
+
+              <p
+                className="overflow-hidden text-sm leading-7 text-slate-200/90"
+                style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}
+              >
+                {toExcerpt(post.content)}
+              </p>
             </article>
           ))}
 
@@ -247,28 +257,67 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
           )}
         </main>
 
-        <aside className="rounded-3xl border border-slate-100/20 bg-slate-950/70 p-5 shadow-[0_18px_40px_rgba(12,20,36,0.5)] backdrop-blur-md lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:overflow-auto">
-          <div className="mb-4 overflow-hidden rounded-2xl border border-slate-200/20">
-            <img src={TIMELINE_BANNER} alt="timeline" className="h-32 w-full object-cover" />
-          </div>
-          <h2 className="mb-3 text-lg font-semibold text-slate-100">时间轴</h2>
-          <div className="relative space-y-4 before:absolute before:bottom-2 before:left-[11px] before:top-2 before:w-px before:bg-gradient-to-b before:from-cyan-200/70 before:via-rose-200/45 before:to-transparent">
-            {timelineItems.slice(0, 12).map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => onOpenPost(item.id)}
-                className="relative block w-full rounded-xl border border-slate-200/15 bg-slate-900/65 p-3 pl-8 text-left transition hover:border-cyan-200/40 hover:bg-slate-800/65"
-              >
-                <span className="absolute left-[7px] top-4 h-2.5 w-2.5 rounded-full bg-gradient-to-r from-rose-300 to-cyan-200" />
-                <p className="text-xs text-slate-300/75">{formatDateTime(item.createdAt)}</p>
-                <p className="mt-1 truncate text-sm text-slate-100">
-                  #{item.id} {item.title}
-                </p>
-              </button>
-            ))}
+        <aside className="p-2 lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)]">
+          <h2 className="text-center text-xs tracking-[0.24em] text-slate-100/90">ARC SCROLL</h2>
+          <p className="mt-2 text-center text-xs text-slate-200/85">拖拽亚克力光点快速上下移动页面</p>
 
-            {timelineItems.length === 0 && <p className="text-sm text-slate-300/75">暂无时间轴事件。</p>}
+          <div className="mt-5 flex justify-center">
+            <div
+              ref={arcRef}
+              onPointerDown={handleArcPointerDown}
+              className="relative h-[312px] w-[132px]"
+              role="presentation"
+            >
+              <svg width="132" height="312" viewBox="0 0 132 312" fill="none" className="absolute inset-0">
+                <path
+                  d="M72 20 Q8 156 72 292"
+                  stroke="url(#arc-glow-base)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  className="opacity-85"
+                />
+                <path
+                  d="M72 20 Q8 156 72 292"
+                  stroke="url(#arc-glow-animated)"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                  strokeDasharray="28 16"
+                  className="arc-flow"
+                />
+                <defs>
+                  <linearGradient id="arc-glow-base" x1="72" y1="20" x2="72" y2="292" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="rgba(251,113,133,0.62)" />
+                    <stop offset="0.5" stopColor="rgba(192,132,252,0.42)" />
+                    <stop offset="1" stopColor="rgba(34,211,238,0.68)" />
+                  </linearGradient>
+                  <linearGradient id="arc-glow-animated" x1="72" y1="20" x2="72" y2="292" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="rgba(255,207,240,0.94)" />
+                    <stop offset="0.5" stopColor="rgba(227,166,255,0.9)" />
+                    <stop offset="1" stopColor="rgba(148,240,255,0.9)" />
+                  </linearGradient>
+                </defs>
+              </svg>
+
+              <button
+                type="button"
+                onPointerDown={handleDotPointerDown}
+                onKeyDown={(event) => {
+                  if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    scrollToRatio(scrollRatio - 0.05);
+                  }
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    scrollToRatio(scrollRatio + 0.05);
+                  }
+                }}
+                aria-label="页面滚动控制点"
+                className={`absolute h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 bg-white/35 shadow-[0_0_30px_rgba(255,255,255,0.46)] backdrop-blur-xl outline-none transition ${
+                  isDraggingDot ? "scale-110" : "acrylic-dot"
+                }`}
+                style={{ left: `${dotX}px`, top: `${dotY}px` }}
+              />
+            </div>
           </div>
         </aside>
       </div>

@@ -35,6 +35,25 @@ function sanitizeAuthor(rawAuthor: unknown): string {
   return String(rawAuthor ?? "").trim();
 }
 
+function normalizePostTags(rawTags: unknown): string[] {
+  if (!Array.isArray(rawTags)) return [];
+
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  for (const item of rawTags) {
+    const tag = String(item ?? "").trim().replace(/\s+/g, " ").slice(0, 24);
+    if (!tag) continue;
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(tag);
+    if (normalized.length >= 12) break;
+  }
+
+  return normalized;
+}
+
 async function fetchAllPostsRaw() {
   return redisClient.lRange("kuromi:posts", 0, -1);
 }
@@ -81,6 +100,7 @@ app.get("/api/posts", async (req, res) => {
           id: post.id,
           author: post.author,
           title: post.title,
+          tags: normalizePostTags(post.tags),
           content: post.content,
           createdAt: post.createdAt,
           comments,
@@ -123,6 +143,7 @@ app.get("/api/posts/:id", async (req, res) => {
       id: targetPost.id,
       author: targetPost.author,
       title: targetPost.title,
+      tags: normalizePostTags(targetPost.tags),
       content: targetPost.content,
       createdAt: targetPost.createdAt,
       comments,
@@ -140,6 +161,7 @@ app.post("/api/posts", async (req, res) => {
   const author = sanitizeAuthor(req.body?.author);
   const content = normalizePostContent(req.body?.content);
   const title = normalizePostTitle(req.body?.title, content);
+  const tags = normalizePostTags(req.body?.tags);
   const imageUrl = String(req.body?.imageUrl ?? "");
   const imageWidth = Number(req.body?.imageWidth);
   const imageHeight = Number(req.body?.imageHeight);
@@ -166,6 +188,7 @@ app.post("/api/posts", async (req, res) => {
       id,
       author,
       title,
+      tags,
       content: content || "",
       imageUrl: imageUrl || "",
       imageWidth: Number.isFinite(imageWidth) ? imageWidth : undefined,
@@ -188,6 +211,7 @@ app.put("/api/posts/:id", async (req, res) => {
   const author = sanitizeAuthor(req.body?.author);
   const content = normalizePostContent(req.body?.content);
   const title = normalizePostTitle(req.body?.title, content);
+  const tags = normalizePostTags(req.body?.tags);
 
   if (!Number.isInteger(postId) || postId <= 0) {
     return res.status(400).json({ error: "Invalid post id" });
@@ -221,6 +245,7 @@ app.put("/api/posts/:id", async (req, res) => {
     posts[targetIndex] = {
       ...target,
       title,
+      tags,
       content,
       updatedAt: new Date().toISOString(),
     };

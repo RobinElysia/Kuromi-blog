@@ -2,6 +2,7 @@ export interface Post {
   id: number;
   author: string;
   title?: string;
+  tags?: string[];
   content: string;
   imageUrl?: string;
   hasImage?: boolean;

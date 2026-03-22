@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Post, User } from "../types";
-import MarkdownRenderer from "./MarkdownRenderer";
 
 interface PostEditorPageProps {
   currentUser: User;
@@ -21,6 +20,8 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -47,7 +48,7 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
     const keyword = search.trim().toLowerCase();
     if (!keyword) return posts;
     return posts.filter((post) => {
-      const summary = `${extractPostTitle(post)} ${post.author} ${post.content}`.toLowerCase();
+      const summary = `${extractPostTitle(post)} ${post.author} ${post.content} ${(post.tags ?? []).join(" ")}`.toLowerCase();
       return summary.includes(keyword);
     });
   }, [posts, search]);
@@ -55,6 +56,8 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
   const handleSelectPost = (post: Post) => {
     setSelectedId(post.id);
     setTitle(extractPostTitle(post));
+    setTags(post.tags ?? []);
+    setTagInput("");
     setContent(post.content ?? "");
     setMessage("");
   };
@@ -62,8 +65,24 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
   const handleCreateNew = () => {
     setSelectedId(null);
     setTitle("");
+    setTags([]);
+    setTagInput("");
     setContent("");
-    setMessage("已切换到新文档");
+    setMessage("已切换为新帖子草稿");
+  };
+
+  const addTag = (rawTag: string) => {
+    const cleaned = rawTag.trim().replace(/\s+/g, " ").slice(0, 24);
+    if (!cleaned) return;
+    setTags((prev) => {
+      if (prev.some((tag) => tag.toLowerCase() === cleaned.toLowerCase())) return prev;
+      if (prev.length >= 12) return prev;
+      return [...prev, cleaned];
+    });
+  };
+
+  const removeTag = (targetTag: string) => {
+    setTags((prev) => prev.filter((tag) => tag !== targetTag));
   };
 
   const handleImportMarkdown = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,6 +124,7 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
       const target = textAreaRef.current;
       if (!target) {
         setContent((prev) => `${prev}${markdownImage}`);
+        setMessage("图片已插入文档");
         return;
       }
 
@@ -151,6 +171,7 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
         body: JSON.stringify({
           author: currentUser.username,
           title: trimmedTitle,
+          tags,
           content: trimmedContent,
         }),
       });
@@ -200,7 +221,7 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
 
       await fetchPosts();
       handleCreateNew();
-      setMessage("已删除帖子");
+      setMessage("帖子已删除");
     } catch (err) {
       console.error("Failed to delete post:", err);
       setMessage("删除失败，请稍后重试");
@@ -209,15 +230,11 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
     }
   };
 
-  const previewSource = content.trim()
-    ? content
-    : "## Preview\n\n在左侧编写 Markdown，支持：\n\n- **Markdown**\n- `$LaTeX$` 与 `$$LaTeX$$`\n- `mermaid` 代码块\n\n```mermaid\ngraph TD;\n  Kuromi --> SecretBase;\n```\n";
-
   return (
     <div className="mx-auto grid w-full max-w-[1600px] gap-5 p-4 sm:p-6 lg:grid-cols-[280px_minmax(0,1fr)]">
       <aside className="rounded-3xl border border-slate-100/20 bg-slate-950/72 p-4 backdrop-blur-md">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-100">帖子文档</h2>
+          <h2 className="text-sm font-semibold text-slate-100">帖子草稿</h2>
           <button
             type="button"
             onClick={handleCreateNew}
@@ -243,72 +260,110 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
               <p className="mt-1 text-[11px] text-slate-300/70">{post.author}</p>
             </button>
           ))}
-          {filteredPosts.length === 0 && <p className="text-xs text-slate-300/70">暂无匹配文档</p>}
+          {filteredPosts.length === 0 && <p className="text-xs text-slate-300/70">暂无匹配帖子。</p>}
         </div>
       </aside>
 
-      <section className="space-y-5">
-        <div className="rounded-3xl border border-slate-100/20 bg-slate-950/70 p-5 backdrop-blur-md">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="输入帖子标题"
-              aria-label="帖子标题"
-              className="h-10 flex-1 rounded-xl border border-slate-200/20 bg-slate-900/70 px-3 text-base text-slate-100 outline-none ring-cyan-200/50 transition focus:ring-1 sm:text-sm"
-            />
-            <label className="cursor-pointer rounded-xl border border-slate-200/25 bg-slate-900/60 px-3 py-2 text-xs text-slate-100">
-              导入 .md
-              <input type="file" accept=".md,text/markdown" className="hidden" onChange={handleImportMarkdown} />
-            </label>
-            <label className="cursor-pointer rounded-xl border border-slate-200/25 bg-slate-900/60 px-3 py-2 text-xs text-slate-100">
-              插入图片
-              <input type="file" accept="image/*" className="hidden" onChange={handleInsertImage} />
-            </label>
-            <button
-              type="button"
-              onClick={handlePublish}
-              disabled={loading}
-              className="rounded-xl bg-gradient-to-r from-rose-400 via-orange-300 to-cyan-300 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-60"
-            >
-              {selectedId ? "更新发布" : "发布帖子"}
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={loading || !selectedId}
-              className="rounded-xl border border-rose-200/35 bg-rose-200/10 px-4 py-2 text-sm text-rose-100 disabled:opacity-60"
-            >
-              删除
-            </button>
-            <button
-              type="button"
-              onClick={() => selectedId && onOpenPost(selectedId)}
-              disabled={!selectedId}
-              className="rounded-xl border border-cyan-200/35 bg-cyan-200/10 px-4 py-2 text-sm text-cyan-100 disabled:opacity-60"
-            >
-              查看详情
-            </button>
-          </div>
-
-          <textarea
-            ref={textAreaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="在这里写 Markdown 内容…"
-            aria-label="Markdown 编辑器"
-            className="min-h-[320px] w-full resize-y rounded-2xl border border-slate-200/15 bg-slate-900/75 p-4 font-mono text-base text-slate-100 outline-none ring-cyan-200/45 transition focus:ring-1 sm:text-sm"
+      <section className="rounded-3xl border border-slate-100/20 bg-slate-950/70 p-5 backdrop-blur-md">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="输入帖子标题"
+            aria-label="帖子标题"
+            className="h-10 min-w-[220px] flex-1 rounded-xl border border-slate-200/20 bg-slate-900/70 px-3 text-base text-slate-100 outline-none ring-cyan-200/50 transition focus:ring-1 sm:text-sm"
           />
-          <p className="mt-2 text-xs text-slate-300/75">
-            注：本项目无注册，仅 RobinElysia 与 Meow 有发布管理权限；访客模式可浏览与评论。
-          </p>
-          {message && <p className="mt-2 text-xs text-orange-100">{message}</p>}
+          <label className="cursor-pointer rounded-xl border border-slate-200/25 bg-slate-900/60 px-3 py-2 text-xs text-slate-100">
+            导入 .md
+            <input type="file" accept=".md,text/markdown" className="hidden" onChange={handleImportMarkdown} />
+          </label>
+          <label className="cursor-pointer rounded-xl border border-slate-200/25 bg-slate-900/60 px-3 py-2 text-xs text-slate-100">
+            插入图片
+            <input type="file" accept="image/*" className="hidden" onChange={handleInsertImage} />
+          </label>
+          <button
+            type="button"
+            onClick={handlePublish}
+            disabled={loading}
+            className="rounded-xl bg-gradient-to-r from-rose-400 via-orange-300 to-cyan-300 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-60"
+          >
+            {selectedId ? "更新发布" : "发布帖子"}
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={loading || !selectedId}
+            className="rounded-xl border border-rose-200/35 bg-rose-200/10 px-4 py-2 text-sm text-rose-100 disabled:opacity-60"
+          >
+            删除
+          </button>
+          <button
+            type="button"
+            onClick={() => selectedId && onOpenPost(selectedId)}
+            disabled={!selectedId}
+            className="rounded-xl border border-cyan-200/35 bg-cyan-200/10 px-4 py-2 text-sm text-cyan-100 disabled:opacity-60"
+          >
+            查看详情
+          </button>
         </div>
 
-        <div className="rounded-3xl border border-slate-100/20 bg-slate-950/70 p-5 backdrop-blur-md">
-          <h3 className="mb-3 text-sm font-semibold tracking-wide text-cyan-100/90">实时渲染预览</h3>
-          <MarkdownRenderer content={previewSource} className="prose prose-invert max-w-none text-slate-100 prose-headings:text-rose-100 prose-strong:text-orange-100 prose-p:text-slate-100/90" />
+        <div className="mb-3 rounded-2xl border border-slate-200/15 bg-slate-900/55 p-3">
+          <p className="mb-2 text-xs tracking-[0.14em] text-slate-300/80">TAGS</p>
+          <div className="mb-2 flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 rounded-full border border-cyan-200/35 bg-cyan-200/10 px-2.5 py-1 text-xs text-cyan-100"
+              >
+                #{tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  aria-label={`删除标签 ${tag}`}
+                  className="rounded-full px-1 text-cyan-50/85 hover:bg-cyan-200/20"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            {tags.length === 0 && <span className="text-xs text-slate-300/70">暂无标签</span>}
+          </div>
+          <input
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                addTag(tagInput);
+                setTagInput("");
+              }
+              if (e.key === "Backspace" && !tagInput) {
+                setTags((prev) => prev.slice(0, -1));
+              }
+            }}
+            onBlur={() => {
+              if (!tagInput.trim()) return;
+              addTag(tagInput);
+              setTagInput("");
+            }}
+            placeholder="输入标签后按 Enter，例如：Diary"
+            aria-label="帖子标签输入"
+            className="h-9 w-full rounded-xl border border-slate-200/20 bg-slate-900/70 px-3 text-sm text-slate-100 outline-none ring-cyan-200/50 transition focus:ring-1"
+          />
         </div>
+
+        <textarea
+          ref={textAreaRef}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="在这里编写 Markdown 内容，支持 LaTeX 和 Mermaid 语法。"
+          aria-label="Markdown 编辑器"
+          className="min-h-[74vh] w-full resize-y rounded-2xl border border-slate-200/15 bg-slate-900/75 p-4 font-mono text-base text-slate-100 outline-none ring-cyan-200/45 transition focus:ring-1 sm:text-sm"
+        />
+        <p className="mt-2 text-xs text-slate-300/75">
+          项目说明：本站无注册，仅 RobinElysia 与 Meow 拥有发帖管理权限；访客模式可浏览与评论。
+        </p>
+        {message && <p className="mt-2 text-xs text-orange-100">{message}</p>}
       </section>
     </div>
   );

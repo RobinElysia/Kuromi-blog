@@ -121,6 +121,14 @@ export default function PostDetail({ postId, currentUser, onBack }: PostDetailPr
                 <p className="text-xs text-slate-300/70">{formatTime(post.createdAt)}</p>
               </div>
             </div>
+            <div className="mb-5 flex flex-wrap gap-2">
+              {(post.tags ?? []).map((tag) => (
+                <span key={tag} className="rounded-full border border-cyan-200/35 bg-cyan-200/10 px-2.5 py-1 text-xs text-cyan-100">
+                  #{tag}
+                </span>
+              ))}
+              {(post.tags ?? []).length === 0 && <span className="text-xs text-slate-400/80">#未分类</span>}
+            </div>
 
             <MarkdownRenderer
               content={post.content || ""}
