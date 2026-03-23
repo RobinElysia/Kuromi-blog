@@ -1,5 +1,11 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
+import { Editor } from "@bytemd/react";
 import type { Post, User } from "../types";
+import { createMarkdownSanitizer, markdownPlugins } from "../lib/markdown";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
 
 interface PostEditorPageProps {
   currentUser: User;
@@ -16,6 +22,19 @@ function extractPostTitle(post: Post) {
   return fallback || "未命名帖子";
 }
 
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function normalizeMarkdown(value: string) {
+  return value.replace(/\r\n/g, "\n");
+}
+
 export default function PostEditorPage({ currentUser, search, onOpenPost }: PostEditorPageProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -25,7 +44,6 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
   const isAdmin = ADMIN_SET.has(currentUser.username);
 
@@ -47,6 +65,7 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
   const filteredPosts = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     if (!keyword) return posts;
+
     return posts.filter((post) => {
       const summary = `${extractPostTitle(post)} ${post.author} ${post.content} ${(post.tags ?? []).join(" ")}`.toLowerCase();
       return summary.includes(keyword);
@@ -74,6 +93,7 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
   const addTag = (rawTag: string) => {
     const cleaned = rawTag.trim().replace(/\s+/g, " ").slice(0, 24);
     if (!cleaned) return;
+
     setTags((prev) => {
       if (prev.some((tag) => tag.toLowerCase() === cleaned.toLowerCase())) return prev;
       if (prev.length >= 12) return prev;
@@ -90,15 +110,18 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
     if (!file) return;
 
     try {
-      const text = await file.text();
-      setContent(text.replace(/\r\n/g, "\n"));
+      const text = normalizeMarkdown(await file.text());
+      setContent(text);
+
       if (!title.trim()) {
         const firstLine = text
           .split(/\r?\n/)
           .map((line) => line.replace(/^#+\s*/, "").trim())
           .find(Boolean);
+
         if (firstLine) setTitle(firstLine.slice(0, 120));
       }
+
       setMessage(`已导入 ${file.name}`);
     } catch (err) {
       console.error("Failed to import markdown:", err);
@@ -113,31 +136,9 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
     if (!file) return;
 
     try {
-      const dataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
+      const dataUrl = await fileToDataUrl(file);
       const markdownImage = `\n![${file.name}](${dataUrl})\n`;
-      const target = textAreaRef.current;
-      if (!target) {
-        setContent((prev) => `${prev}${markdownImage}`);
-        setMessage("图片已插入文档");
-        return;
-      }
-
-      const start = target.selectionStart ?? content.length;
-      const end = target.selectionEnd ?? content.length;
-      const next = content.slice(0, start) + markdownImage + content.slice(end);
-      setContent(next);
-
-      window.requestAnimationFrame(() => {
-        const cursor = start + markdownImage.length;
-        target.focus();
-        target.setSelectionRange(cursor, cursor);
-      });
+      setContent((prev) => `${prev}${markdownImage}`);
       setMessage("图片已插入文档");
     } catch (err) {
       console.error("Failed to insert image:", err);
@@ -153,7 +154,7 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
       return;
     }
 
-    const trimmedContent = content.trim();
+    const trimmedContent = normalizeMarkdown(content).trim();
     const trimmedTitle = title.trim();
     if (!trimmedContent) {
       setMessage("正文不能为空");
@@ -200,10 +201,12 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
       setMessage("访客模式无删除权限");
       return;
     }
+
     if (!selectedId) {
       setMessage("请先选择要删除的帖子");
       return;
     }
+
     if (!window.confirm("确认删除当前帖子？删除后不可恢复。")) return;
 
     setLoading(true);
@@ -213,6 +216,7 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ author: currentUser.username }),
       });
+
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setMessage(data.error || "删除失败");
@@ -231,20 +235,17 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
   };
 
   return (
-    <div className="mx-auto grid w-full max-w-[1600px] gap-5 p-4 sm:p-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="rounded-3xl border border-slate-100/20 bg-slate-950/72 p-4 backdrop-blur-md">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-100">帖子草稿</h2>
-          <button
-            type="button"
-            onClick={handleCreateNew}
-            className="rounded-lg border border-cyan-200/35 bg-cyan-200/10 px-2 py-1 text-xs text-cyan-100"
-          >
-            新建
-          </button>
-        </div>
-
-        <div className="space-y-2">
+    <div className="mx-auto grid w-full max-w-[1650px] gap-5 p-4 sm:p-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <Card className="p-0">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm tracking-[0.08em] text-slate-100/90">POST DRAFTS</CardTitle>
+            <Button type="button" size="sm" variant="cyan" onClick={handleCreateNew}>
+              新建
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="max-h-[calc(100vh-11rem)] space-y-2 overflow-auto">
           {filteredPosts.map((post) => (
             <button
               key={post.id}
@@ -261,110 +262,115 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
             </button>
           ))}
           {filteredPosts.length === 0 && <p className="text-xs text-slate-300/70">暂无匹配帖子。</p>}
-        </div>
-      </aside>
+        </CardContent>
+      </Card>
 
-      <section className="rounded-3xl border border-slate-100/20 bg-slate-950/70 p-5 backdrop-blur-md">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="输入帖子标题"
-            aria-label="帖子标题"
-            className="h-10 min-w-[220px] flex-1 rounded-xl border border-slate-200/20 bg-slate-900/70 px-3 text-base text-slate-100 outline-none ring-cyan-200/50 transition focus:ring-1 sm:text-sm"
-          />
-          <label className="cursor-pointer rounded-xl border border-slate-200/25 bg-slate-900/60 px-3 py-2 text-xs text-slate-100">
-            导入 .md
-            <input type="file" accept=".md,text/markdown" className="hidden" onChange={handleImportMarkdown} />
-          </label>
-          <label className="cursor-pointer rounded-xl border border-slate-200/25 bg-slate-900/60 px-3 py-2 text-xs text-slate-100">
-            插入图片
-            <input type="file" accept="image/*" className="hidden" onChange={handleInsertImage} />
-          </label>
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={loading}
-            className="rounded-xl bg-gradient-to-r from-rose-400 via-orange-300 to-cyan-300 px-4 py-2 text-sm font-semibold text-slate-900 disabled:opacity-60"
-          >
-            {selectedId ? "更新发布" : "发布帖子"}
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={loading || !selectedId}
-            className="rounded-xl border border-rose-200/35 bg-rose-200/10 px-4 py-2 text-sm text-rose-100 disabled:opacity-60"
-          >
-            删除
-          </button>
-          <button
-            type="button"
-            onClick={() => selectedId && onOpenPost(selectedId)}
-            disabled={!selectedId}
-            className="rounded-xl border border-cyan-200/35 bg-cyan-200/10 px-4 py-2 text-sm text-cyan-100 disabled:opacity-60"
-          >
-            查看详情
-          </button>
-        </div>
-
-        <div className="mb-3 rounded-2xl border border-slate-200/15 bg-slate-900/55 p-3">
-          <p className="mb-2 text-xs tracking-[0.14em] text-slate-300/80">TAGS</p>
-          <div className="mb-2 flex flex-wrap gap-2">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-1 rounded-full border border-cyan-200/35 bg-cyan-200/10 px-2.5 py-1 text-xs text-cyan-100"
-              >
-                #{tag}
-                <button
-                  type="button"
-                  onClick={() => removeTag(tag)}
-                  aria-label={`删除标签 ${tag}`}
-                  className="rounded-full px-1 text-cyan-50/85 hover:bg-cyan-200/20"
-                >
-                  ×
-                </button>
+      <Card>
+        <CardHeader className="gap-3 pb-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="输入帖子标题"
+              aria-label="帖子标题"
+              className="min-w-[220px] flex-1"
+            />
+            <label className="inline-flex cursor-pointer items-center">
+              <span className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-lg border border-slate-100/20 bg-slate-900/55 px-3 text-xs font-medium text-slate-100 transition hover:bg-slate-800/65">
+                导入 .md
               </span>
-            ))}
-            {tags.length === 0 && <span className="text-xs text-slate-300/70">暂无标签</span>}
+              <input type="file" accept=".md,text/markdown" className="hidden" onChange={handleImportMarkdown} />
+            </label>
+            <label className="inline-flex cursor-pointer items-center">
+              <span className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-lg border border-slate-100/20 bg-slate-900/55 px-3 text-xs font-medium text-slate-100 transition hover:bg-slate-800/65">
+                插入图片
+              </span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleInsertImage} />
+            </label>
+            <Button type="button" onClick={handlePublish} disabled={loading}>
+              {selectedId ? "更新发布" : "发布帖子"}
+            </Button>
+            <Button type="button" variant="rose" onClick={handleDelete} disabled={loading || !selectedId}>
+              删除
+            </Button>
+            <Button type="button" variant="cyan" onClick={() => selectedId && onOpenPost(selectedId)} disabled={!selectedId}>
+              查看详情
+            </Button>
           </div>
-          <input
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === ",") {
-                e.preventDefault();
+
+          <div className="rounded-2xl border border-slate-200/15 bg-slate-900/55 p-3">
+            <p className="mb-2 text-xs tracking-[0.14em] text-slate-300/80">TAGS</p>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {tags.map((tag) => (
+                <Badge key={tag} className="gap-1">
+                  #{tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    aria-label={`删除标签 ${tag}`}
+                    className="rounded-full px-1 text-cyan-50/85 hover:bg-cyan-200/20"
+                  >
+                    x
+                  </button>
+                </Badge>
+              ))}
+              {tags.length === 0 && <span className="text-xs text-slate-300/70">暂无标签</span>}
+            </div>
+            <Input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  addTag(tagInput);
+                  setTagInput("");
+                }
+                if (e.key === "Backspace" && !tagInput) {
+                  setTags((prev) => prev.slice(0, -1));
+                }
+              }}
+              onBlur={() => {
+                if (!tagInput.trim()) return;
                 addTag(tagInput);
                 setTagInput("");
-              }
-              if (e.key === "Backspace" && !tagInput) {
-                setTags((prev) => prev.slice(0, -1));
-              }
-            }}
-            onBlur={() => {
-              if (!tagInput.trim()) return;
-              addTag(tagInput);
-              setTagInput("");
-            }}
-            placeholder="输入标签后按 Enter，例如：Diary"
-            aria-label="帖子标签输入"
-            className="h-9 w-full rounded-xl border border-slate-200/20 bg-slate-900/70 px-3 text-sm text-slate-100 outline-none ring-cyan-200/50 transition focus:ring-1"
-          />
-        </div>
+              }}
+              placeholder="输入标签后按 Enter，例如：Diary"
+              aria-label="帖子标签输入"
+              className="h-9"
+            />
+          </div>
+        </CardHeader>
 
-        <textarea
-          ref={textAreaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="在这里编写 Markdown 内容，支持 LaTeX 和 Mermaid 语法。"
-          aria-label="Markdown 编辑器"
-          className="min-h-[74vh] w-full resize-y rounded-2xl border border-slate-200/15 bg-slate-900/75 p-4 font-mono text-base text-slate-100 outline-none ring-cyan-200/45 transition focus:ring-1 sm:text-sm"
-        />
-        <p className="mt-2 text-xs text-slate-300/75">
-          项目说明：本站无注册，仅 RobinElysia 与 Meow 拥有发帖管理权限；访客模式可浏览与评论。
-        </p>
-        {message && <p className="mt-2 text-xs text-orange-100">{message}</p>}
-      </section>
+        <CardContent className="space-y-2">
+          <div className="overflow-hidden rounded-2xl border border-slate-200/15 bg-slate-900/75">
+            <Editor
+              value={content}
+              plugins={markdownPlugins}
+              sanitize={createMarkdownSanitizer}
+              mode="split"
+              placeholder="在这里编写 Markdown 内容，支持 LaTeX 与 Mermaid（```mermaid）。"
+              uploadImages={async (files) => {
+                const uploaded = await Promise.all(
+                  files.map(async (file) => ({
+                    url: await fileToDataUrl(file),
+                    alt: file.name,
+                    title: file.name,
+                  }))
+                );
+                setMessage("图片已插入文档");
+                return uploaded;
+              }}
+              onChange={(nextValue) => {
+                setContent(nextValue);
+              }}
+            />
+          </div>
+          <p className="text-xs text-slate-300/75">
+            项目说明：本站无注册，仅 RobinElysia 与 Meow 拥有发帖管理权限；访客模式可浏览与评论。
+          </p>
+          {message && <p className="text-xs text-orange-100">{message}</p>}
+        </CardContent>
+      </Card>
     </div>
   );
 }

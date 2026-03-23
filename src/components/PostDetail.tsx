@@ -1,6 +1,9 @@
 ﻿import React, { useEffect, useState } from "react";
 import type { Post, User } from "../types";
 import MarkdownRenderer from "./MarkdownRenderer";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 const ILLUSTRATION = new URL("../public/kuromi/16x9/kv_krm.png", import.meta.url).href;
 
@@ -61,57 +64,49 @@ export default function PostDetail({ postId, currentUser, onBack }: PostDetailPr
 
   if (loading) {
     return (
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl items-center justify-center p-6">
-        <div className="rounded-3xl border border-slate-100/20 bg-slate-950/66 px-8 py-6 text-slate-100 backdrop-blur-md">
-          正在加载帖子详情…
-        </div>
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center p-6">
+        <Card className="px-8 py-6 text-slate-100">
+          正在加载帖子详情...
+        </Card>
       </div>
     );
   }
 
   if (!post) {
     return (
-      <div className="mx-auto min-h-screen w-full max-w-5xl p-6">
-        <div className="rounded-3xl border border-slate-100/20 bg-slate-950/66 p-6 backdrop-blur-md">
+      <div className="mx-auto min-h-screen w-full max-w-6xl p-6">
+        <Card className="p-6">
           <p className="text-rose-200">{error || "帖子不存在"}</p>
-          <button
-            type="button"
-            onClick={onBack}
-            className="mt-4 rounded-xl border border-cyan-200/40 bg-cyan-200/10 px-4 py-2 text-cyan-100 transition hover:bg-cyan-200/25"
-          >
+          <Button type="button" onClick={onBack} variant="cyan" className="mt-4">
             返回
-          </button>
-        </div>
+          </Button>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-6xl p-4 sm:p-8">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-rose-300/35 bg-slate-950/70 p-4 shadow-[0_16px_45px_rgba(19,28,43,0.42)] backdrop-blur-md">
-        <div>
-          <p className="text-xs tracking-[0.2em] text-cyan-100/85">POST DETAIL</p>
-          <h1 className="bg-gradient-to-r from-rose-100 via-orange-100 to-cyan-100 bg-clip-text text-xl font-bold text-transparent">
-            {resolvePostTitle(post)}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-lg border border-slate-200/30 bg-slate-900/70 px-3 py-1 text-xs text-slate-100">
-            当前用户: {currentUser.username}
-          </span>
-          <button
-            type="button"
-            onClick={onBack}
-            className="rounded-xl border border-cyan-200/40 bg-cyan-200/10 px-4 py-2 text-cyan-100 transition hover:bg-cyan-200/25"
-          >
-            返回主页
-          </button>
-        </div>
-      </header>
+      <Card className="mb-5">
+        <CardHeader className="flex-row flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs tracking-[0.2em] text-cyan-100/85">POST DETAIL</p>
+            <CardTitle className="bg-gradient-to-r from-rose-100 via-orange-100 to-cyan-100 bg-clip-text text-2xl text-transparent">
+              {resolvePostTitle(post)}
+            </CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="muted">当前用户: {currentUser.username}</Badge>
+            <Button type="button" onClick={onBack} variant="cyan">
+              返回主页
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
 
-      <article className="overflow-hidden rounded-3xl border border-slate-100/20 bg-slate-950/70 backdrop-blur-md">
+      <Card className="overflow-hidden">
         <div className="grid gap-0 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="p-6 sm:p-8">
+          <CardContent className="p-6 sm:p-8">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-300 to-cyan-200 font-bold text-slate-900">
                 {post.author.charAt(0).toUpperCase()}
@@ -121,20 +116,16 @@ export default function PostDetail({ postId, currentUser, onBack }: PostDetailPr
                 <p className="text-xs text-slate-300/70">{formatTime(post.createdAt)}</p>
               </div>
             </div>
+
             <div className="mb-5 flex flex-wrap gap-2">
               {(post.tags ?? []).map((tag) => (
-                <span key={tag} className="rounded-full border border-cyan-200/35 bg-cyan-200/10 px-2.5 py-1 text-xs text-cyan-100">
-                  #{tag}
-                </span>
+                <Badge key={tag}>#{tag}</Badge>
               ))}
-              {(post.tags ?? []).length === 0 && <span className="text-xs text-slate-400/80">#未分类</span>}
+              {(post.tags ?? []).length === 0 && <Badge variant="muted">#未分类</Badge>}
             </div>
 
-            <MarkdownRenderer
-              content={post.content || ""}
-              className="prose prose-invert max-w-none text-slate-100 prose-headings:text-rose-100 prose-strong:text-orange-100 prose-p:text-slate-100/90"
-            />
-          </div>
+            <MarkdownRenderer content={post.content || ""} className="max-w-none text-slate-100" />
+          </CardContent>
 
           <aside className="border-t border-slate-100/15 bg-slate-900/55 p-6 lg:border-l lg:border-t-0">
             <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200/20">
@@ -155,7 +146,7 @@ export default function PostDetail({ postId, currentUser, onBack }: PostDetailPr
             </div>
           </aside>
         </div>
-      </article>
+      </Card>
     </div>
   );
 }

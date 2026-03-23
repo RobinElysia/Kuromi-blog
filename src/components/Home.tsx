@@ -1,5 +1,8 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import { User, Post } from "../types";
+import { Button } from "./ui/button";
+import { Card, CardContent } from "./ui/card";
+import { Badge } from "./ui/badge";
 
 interface HomeProps {
   user: User;
@@ -38,7 +41,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function toExcerpt(content: string, maxLength = 180) {
+function toExcerpt(content: string, maxLength = 200) {
   const plain = content
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/`[^`]*`/g, " ")
@@ -52,7 +55,7 @@ function toExcerpt(content: string, maxLength = 180) {
 
   if (!plain) return "（暂无正文预览）";
   if (plain.length <= maxLength) return plain;
-  return `${plain.slice(0, maxLength)}…`;
+  return `${plain.slice(0, maxLength)}...`;
 }
 
 export default function Home({ user, search, onLogout, onChangeWallpaper, onOpenPost, onOpenEditor }: HomeProps) {
@@ -60,7 +63,8 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
   const [runtimeText, setRuntimeText] = useState(() => formatRuntime(new Date()));
   const [scrollRatio, setScrollRatio] = useState(0);
   const [isDraggingDot, setIsDraggingDot] = useState(false);
-  const arcRef = useRef<HTMLDivElement>(null);
+  const [railHeight, setRailHeight] = useState(() => clamp(window.innerHeight * 0.62, 420, 760));
+  const barRef = useRef<HTMLDivElement>(null);
 
   const fetchPosts = async () => {
     try {
@@ -86,6 +90,15 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
   }, []);
 
   useEffect(() => {
+    const updateRailHeight = () => {
+      setRailHeight(clamp(window.innerHeight * 0.62, 420, 760));
+    };
+    updateRailHeight();
+    window.addEventListener("resize", updateRailHeight, { passive: true });
+    return () => window.removeEventListener("resize", updateRailHeight);
+  }, []);
+
+  useEffect(() => {
     const updateScrollRatio = () => {
       const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 0);
       if (maxScroll === 0) {
@@ -98,6 +111,7 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
     updateScrollRatio();
     window.addEventListener("scroll", updateScrollRatio, { passive: true });
     window.addEventListener("resize", updateScrollRatio, { passive: true });
+
     return () => {
       window.removeEventListener("scroll", updateScrollRatio);
       window.removeEventListener("resize", updateScrollRatio);
@@ -111,14 +125,14 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
   };
 
   const updateByClientY = (clientY: number) => {
-    const arc = arcRef.current;
-    if (!arc) return;
-    const rect = arc.getBoundingClientRect();
+    const bar = barRef.current;
+    if (!bar) return;
+    const rect = bar.getBoundingClientRect();
     const ratio = (clientY - rect.top) / rect.height;
     scrollToRatio(ratio);
   };
 
-  const handleArcPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+  const handleBarPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     updateByClientY(event.clientY);
   };
 
@@ -151,14 +165,14 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
     });
   }, [posts, search]);
 
-  const dotY = 20 + 272 * scrollRatio;
-  const arcBend = 64;
-  const dotX = 72 - arcBend * 4 * scrollRatio * (1 - scrollRatio);
+  const topPadding = 16;
+  const bottomPadding = 16;
+  const dotY = topPadding + (railHeight - topPadding - bottomPadding) * scrollRatio;
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto grid w-full max-w-[1500px] gap-5 lg:grid-cols-[320px_minmax(0,1fr)_220px]">
-        <aside className="rounded-3xl border border-slate-100/20 bg-slate-950/70 p-5 shadow-[0_18px_40px_rgba(12,20,36,0.5)] backdrop-blur-md lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:overflow-auto">
+      <div className="mx-auto grid w-full max-w-[1550px] gap-5 lg:grid-cols-[320px_minmax(0,1fr)_188px]">
+        <Card className="p-5 lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:overflow-auto">
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200/20">
             <img src={LEFT_AVATAR} alt="avatar" className="h-48 w-full object-cover" />
           </div>
@@ -178,125 +192,91 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-2">
-            <button
-              onClick={onChangeWallpaper}
-              className="rounded-xl border border-cyan-200/40 bg-cyan-200/10 px-3 py-2 text-cyan-100 transition hover:bg-cyan-200/25"
-              title="切换壁纸"
-            >
+            <Button onClick={onChangeWallpaper} variant="cyan" title="切换壁纸">
               切换壁纸
-            </button>
-            <button
-              onClick={onLogout}
-              className="rounded-xl border border-rose-200/35 bg-rose-200/10 px-3 py-2 text-rose-100 transition hover:bg-rose-200/25"
-              title="退出登录"
-            >
+            </Button>
+            <Button onClick={onLogout} variant="rose" title="退出登录">
               退出登录
-            </button>
+            </Button>
           </div>
 
           {ADMIN_SET.has(user.username) && (
-            <button
-              type="button"
-              onClick={onOpenEditor}
-              className="mt-3 w-full rounded-xl bg-gradient-to-r from-rose-400 via-orange-300 to-cyan-300 px-4 py-2 text-sm font-semibold text-slate-900"
-            >
+            <Button type="button" onClick={onOpenEditor} className="mt-3 w-full">
               进入帖子编辑页
-            </button>
+            </Button>
           )}
-        </aside>
+        </Card>
 
-        <main className="space-y-4">
-          {filteredPosts.map((post) => (
-            <article
-              key={post.id}
-              className="rounded-3xl border border-slate-100/15 bg-slate-950/68 p-6 shadow-[0_18px_40px_rgba(12,20,36,0.5)] backdrop-blur-md"
-            >
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-300 to-cyan-200 font-bold text-slate-900">
-                    {post.author.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-slate-50">{resolvePostTitle(post)}</h3>
-                    <p className="text-xs text-slate-300/70">
-                      {post.author} · {formatDateTime(post.createdAt)}
+        <main className="relative pl-8 sm:pl-12">
+          <div className="pointer-events-none absolute bottom-0 left-2 top-0 w-[2px] rounded-full bg-gradient-to-b from-rose-300/80 via-cyan-200/65 to-cyan-300/35 shadow-[0_0_24px_rgba(34,211,238,0.35)] sm:left-4" />
+          <div className="space-y-5">
+            {filteredPosts.map((post) => (
+              <article key={post.id} className="relative">
+                <div className="absolute left-2 top-7 h-3.5 w-3.5 -translate-x-1/2 rounded-full border border-white/60 bg-slate-50 shadow-[0_0_16px_rgba(255,255,255,0.7)] sm:left-4" />
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-300 to-cyan-200 font-bold text-slate-900">
+                          {post.author.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-slate-50">{resolvePostTitle(post)}</h3>
+                          <p className="text-xs text-slate-300/70">
+                            {post.author} · {formatDateTime(post.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <Button type="button" variant="cyan" size="sm" onClick={() => onOpenPost(post.id)}>
+                        查看详情
+                      </Button>
+                    </div>
+
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      {(post.tags ?? []).map((tag) => (
+                        <Badge key={`${post.id}-${tag}`}>#{tag}</Badge>
+                      ))}
+                      {(post.tags ?? []).length === 0 && <Badge variant="muted">#未分类</Badge>}
+                    </div>
+
+                    <p
+                      className="overflow-hidden text-sm leading-7 text-slate-200/90"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}
+                    >
+                      {toExcerpt(post.content)}
                     </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onOpenPost(post.id)}
-                  className="rounded-xl border border-cyan-200/40 bg-cyan-200/10 px-3 py-2 text-xs text-cyan-100 transition hover:bg-cyan-200/25"
-                >
-                  查看详情
-                </button>
-              </div>
+                  </CardContent>
+                </Card>
+              </article>
+            ))}
 
-              <div className="mb-3 flex flex-wrap gap-2">
-                {(post.tags ?? []).map((tag) => (
-                  <span key={`${post.id}-${tag}`} className="rounded-full border border-cyan-200/35 bg-cyan-200/10 px-2.5 py-1 text-xs text-cyan-100">
-                    #{tag}
-                  </span>
-                ))}
-                {(post.tags ?? []).length === 0 && <span className="text-xs text-slate-400/80">#未分类</span>}
-              </div>
-
-              <p
-                className="overflow-hidden text-sm leading-7 text-slate-200/90"
-                style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}
-              >
-                {toExcerpt(post.content)}
-              </p>
-            </article>
-          ))}
-
-          {filteredPosts.length === 0 && (
-            <div className="rounded-3xl border border-slate-100/20 bg-slate-950/55 py-14 text-center text-slate-200/75 backdrop-blur-md">
-              <p>没有匹配的帖子。</p>
-            </div>
-          )}
+            {filteredPosts.length === 0 && (
+              <Card className="py-14 text-center text-slate-200/75">
+                <p>没有匹配的帖子。</p>
+              </Card>
+            )}
+          </div>
         </main>
 
         <aside className="p-2 lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)]">
-          <h2 className="text-center text-xs tracking-[0.24em] text-slate-100/90">ARC SCROLL</h2>
-          <p className="mt-2 text-center text-xs text-slate-200/85">拖拽亚克力光点快速上下移动页面</p>
+          <p className="text-center text-xs tracking-[0.24em] text-slate-100/90">LINE SCROLL</p>
+          <p className="mt-2 text-center text-xs text-slate-200/85">拖拽光点或点击刻度快速跳转页面</p>
 
-          <div className="mt-5 flex justify-center">
-            <div
-              ref={arcRef}
-              onPointerDown={handleArcPointerDown}
-              className="relative h-[312px] w-[132px]"
-              role="presentation"
-            >
-              <svg width="132" height="312" viewBox="0 0 132 312" fill="none" className="absolute inset-0">
-                <path
-                  d="M72 20 Q8 156 72 292"
-                  stroke="url(#arc-glow-base)"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  className="opacity-85"
+          <div className="mt-6 flex justify-center">
+            <div ref={barRef} onPointerDown={handleBarPointerDown} className="relative w-12" role="presentation" style={{ height: `${railHeight}px` }}>
+              <div className="absolute bottom-0 left-1/2 top-0 w-[3px] -translate-x-1/2 rounded-full bg-slate-200/20" />
+              <div className="absolute left-1/2 top-0 w-[3px] -translate-x-1/2 rounded-full bg-gradient-to-b from-rose-300/80 via-orange-200/70 to-cyan-300/85 shadow-[0_0_20px_rgba(251,113,133,0.48)]" style={{ height: `${dotY}px` }} />
+
+              {[0, 0.2, 0.4, 0.6, 0.8, 1].map((mark) => (
+                <button
+                  key={mark}
+                  type="button"
+                  onClick={() => scrollToRatio(mark)}
+                  className="absolute left-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50 bg-slate-100/55 transition hover:scale-110"
+                  style={{ top: `${mark * railHeight}px` }}
+                  aria-label={`滚动到 ${Math.round(mark * 100)}%`}
                 />
-                <path
-                  d="M72 20 Q8 156 72 292"
-                  stroke="url(#arc-glow-animated)"
-                  strokeWidth="2.6"
-                  strokeLinecap="round"
-                  strokeDasharray="28 16"
-                  className="arc-flow"
-                />
-                <defs>
-                  <linearGradient id="arc-glow-base" x1="72" y1="20" x2="72" y2="292" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="rgba(251,113,133,0.62)" />
-                    <stop offset="0.5" stopColor="rgba(192,132,252,0.42)" />
-                    <stop offset="1" stopColor="rgba(34,211,238,0.68)" />
-                  </linearGradient>
-                  <linearGradient id="arc-glow-animated" x1="72" y1="20" x2="72" y2="292" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="rgba(255,207,240,0.94)" />
-                    <stop offset="0.5" stopColor="rgba(227,166,255,0.9)" />
-                    <stop offset="1" stopColor="rgba(148,240,255,0.9)" />
-                  </linearGradient>
-                </defs>
-              </svg>
+              ))}
 
               <button
                 type="button"
@@ -312,10 +292,10 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
                   }
                 }}
                 aria-label="页面滚动控制点"
-                className={`absolute h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 bg-white/35 shadow-[0_0_30px_rgba(255,255,255,0.46)] backdrop-blur-xl outline-none transition ${
+                className={`absolute left-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 bg-white/35 shadow-[0_0_30px_rgba(255,255,255,0.46)] backdrop-blur-xl outline-none transition ${
                   isDraggingDot ? "scale-110" : "acrylic-dot"
                 }`}
-                style={{ left: `${dotX}px`, top: `${dotY}px` }}
+                style={{ top: `${dotY}px` }}
               />
             </div>
           </div>
