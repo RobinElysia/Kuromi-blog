@@ -170,6 +170,8 @@
 
 .kuromi-markdown .bytemd {
   min-height: auto;
+  height: auto;
+  overflow: visible;
 }
 
 .kuromi-markdown .bytemd-toolbar {
@@ -178,10 +180,17 @@
 
 .kuromi-markdown .bytemd-body {
   min-height: auto;
+  height: auto;
+  overflow: visible;
 }
 
 .kuromi-markdown .bytemd-preview {
   border-left: 0;
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  overflow: visible;
 }
 
 .kuromi-markdown .markdown-body {
@@ -189,11 +198,17 @@
   border: 1px solid var(--md-kuromi-border);
   border-radius: 0.95rem;
   box-sizing: border-box;
-  max-width: 100%;
+  width: 65%;
+  max-width: none;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 18px 42px rgba(12, 18, 34, 0.36);
   padding: 1.1rem 1.2rem;
+}
+
+.post-detail-markdown.kuromi-markdown .markdown-body {
+  width: 100%;
+  max-width: none;
 }
 
 .kuromi-markdown .markdown-body p,
@@ -228,5 +243,11 @@
 @media (prefers-reduced-motion: reduce) {
   .acrylic-dot {
     animation: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .kuromi-markdown .markdown-body {
+    width: 100%;
   }
 }

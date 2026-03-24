@@ -12,7 +12,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
   const markdown = useMemo(() => content.replace(/\r\n/g, "\n"), [content]);
 
   return (
-    <article className={cn("kuromi-markdown", className)}>
+    <article className={cn("kuromi-markdown w-full min-w-0", className)}>
       <Viewer value={markdown} plugins={markdownPlugins} sanitize={createMarkdownSanitizer} />
     </article>
   );

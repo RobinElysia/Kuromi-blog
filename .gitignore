@@ -1,8 +1,8 @@
 node_modules/
 build/
 dist/
-.agent/
-.claude/
+.agents/skills/
+.claude/skills/
 .vscode/
 coverage/
 .DS_Store
