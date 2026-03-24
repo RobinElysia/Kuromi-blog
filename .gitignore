@@ -1,6 +1,7 @@
 node_modules/
 build/
 dist/
+.agents/
 .agents/skills/
 .claude/skills/
 .vscode/
@@ -10,3 +11,4 @@ coverage/
 .env*
 !.env.example
 require.md
+[0-9]*.[0-9]*.[0-9]*.md
