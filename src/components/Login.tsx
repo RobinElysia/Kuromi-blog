@@ -1,9 +1,16 @@
 ﻿import React, { useState } from "react";
+import { Sparkles, UserCircle2 } from "lucide-react";
 import { User } from "../types";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Badge } from "./ui/badge";
 
 interface LoginProps {
   onLogin: (user: User) => void;
 }
+
+const HERO_IMAGE = new URL("../public/kuromi/16x9/kv_krm.png", import.meta.url).href;
 
 export default function Login({ onLogin }: LoginProps) {
   const [username, setUsername] = useState("");
@@ -37,69 +44,102 @@ export default function Login({ onLogin }: LoginProps) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-rose-200/30 bg-slate-950/72 p-8 shadow-[0_25px_80px_rgba(12,18,30,0.6)] backdrop-blur-md">
-        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-rose-400 via-orange-300 to-cyan-300" />
+    <div className="mx-auto flex min-h-screen w-full max-w-[1280px] items-center px-4 py-8 sm:px-6 lg:px-10">
+      <div className="grid w-full gap-6 lg:grid-cols-[1.15fr_minmax(360px,460px)]">
+        <Card className="relative hidden overflow-hidden border-rose-200/25 bg-slate-950/55 lg:flex lg:min-h-[640px]">
+          <img
+            src={HERO_IMAGE}
+            alt="Kuromi Hero"
+            className="absolute inset-0 h-full w-full object-cover object-center opacity-70"
+            loading="eager"
+            decoding="async"
+          />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_22%_28%,rgba(244,114,182,0.28),transparent_48%),radial-gradient(circle_at_76%_65%,rgba(34,211,238,0.26),transparent_52%),linear-gradient(145deg,rgba(2,6,23,0.78),rgba(2,6,23,0.56))]" />
+          <CardContent className="relative z-10 mt-auto space-y-5 p-8">
+            <Badge variant="rose" className="w-fit border-rose-200/45 bg-rose-200/15 text-rose-100">
+              RobinElysia · Meow Only
+            </Badge>
+            <h1 className="text-4xl leading-tight text-slate-50">Kuromi Secret Base</h1>
+            <p className="max-w-xl text-sm leading-7 text-slate-100/85">
+              这是两人私密基地，没有注册入口。管理员账号仅限 RobinElysia 与 Meow，其他访客可通过访客模式浏览内容。
+            </p>
+          </CardContent>
+        </Card>
 
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full border-2 border-rose-200/60 bg-slate-900/80 text-rose-200 shadow-[0_0_25px_rgba(251,113,133,0.45)]">
-            <span className="text-4xl leading-none">♠</span>
-          </div>
+        <Card className="overflow-hidden border-slate-100/25 bg-slate-950/72">
+          <CardHeader className="space-y-3 border-b border-slate-100/10 bg-slate-900/35">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-rose-200/50 bg-slate-900/70 text-rose-100">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <CardTitle className="text-2xl text-slate-50">登录基地</CardTitle>
+                <CardDescription className="text-slate-200/80">仅管理员可写入，访客可浏览。</CardDescription>
+              </div>
+            </div>
 
-          <h1 className="bg-gradient-to-r from-rose-100 via-orange-100 to-cyan-100 bg-clip-text text-3xl font-bold tracking-wide text-transparent">
-            Meow And Elysia&apos;s Secret Base
-          </h1>
-          <p className="mt-2 text-sm text-slate-200/80">仅 RobinElysia / Meow 可管理登录，无注册入口，支持访客模式</p>
-        </div>
+            <div className="flex flex-wrap gap-2 text-xs">
+              <Badge className="bg-cyan-200/12 text-cyan-100">无注册入口</Badge>
+              <Badge variant="muted" className="border-slate-100/25">访客模式可用</Badge>
+            </div>
+          </CardHeader>
 
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300/85">@</span>
-            <input
-              type="text"
-              placeholder="账号"
-              aria-label="账号"
-              name="username"
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-xl border border-slate-200/30 bg-slate-900/70 py-3 pl-11 pr-4 text-slate-50 placeholder:text-slate-300/55 outline-none transition focus:border-cyan-200/65 focus:ring-1 focus:ring-cyan-200/65"
-            />
-          </div>
+          <CardContent className="space-y-5 p-6 sm:p-8">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="username" className="text-xs tracking-[0.14em] text-slate-200/85">
+                  ACCOUNT
+                </label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="账号"
+                  aria-label="账号"
+                  name="username"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-11 rounded-xl border-slate-100/25"
+                />
+              </div>
 
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300/85">*</span>
-            <input
-              type="password"
-              placeholder="密码"
-              aria-label="密码"
-              name="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-slate-200/30 bg-slate-900/70 py-3 pl-11 pr-4 text-slate-50 placeholder:text-slate-300/55 outline-none transition focus:border-cyan-200/65 focus:ring-1 focus:ring-cyan-200/65"
-            />
-          </div>
+              <div className="space-y-2">
+                <label htmlFor="password" className="text-xs tracking-[0.14em] text-slate-200/85">
+                  PASSWORD
+                </label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="密码"
+                  aria-label="密码"
+                  name="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-11 rounded-xl border-slate-100/25"
+                />
+              </div>
 
-          {error && <p className="text-center text-sm text-rose-300">{error}</p>}
+              {error ? <p className="text-sm text-rose-300">{error}</p> : <p className="text-sm text-slate-300/70">请输入管理员账号或选择访客模式。</p>}
 
-          <div className="space-y-3 pt-1">
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-gradient-to-r from-rose-400 via-orange-300 to-cyan-300 py-3 font-semibold text-slate-900 shadow-[0_8px_24px_rgba(251,113,133,0.4)] transition active:scale-[0.98]"
-            >
-              登录
-            </button>
+              <div className="space-y-3 pt-1">
+                <Button type="submit" className="h-11 w-full text-base">
+                  管理员登录
+                </Button>
 
-            <button
-              type="button"
-              onClick={handleGuestLogin}
-              className="w-full rounded-xl border border-slate-200/35 bg-slate-900/35 py-3 font-medium text-slate-100 transition hover:bg-slate-800/45 active:scale-[0.98]"
-            >
-              访客进入
-            </button>
-          </div>
-        </form>
+                <Button
+                  type="button"
+                  onClick={handleGuestLogin}
+                  variant="ghost"
+                  className="h-11 w-full border-slate-100/30 text-sm text-slate-100"
+                >
+                  <UserCircle2 size={16} className="mr-2" />
+                  访客进入
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

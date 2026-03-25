@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import { CalendarClock, Clock3, Crown, FileText, Sparkles } from "lucide-react";
 import { User, Post } from "../types";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -168,67 +169,84 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
   const topPadding = 16;
   const bottomPadding = 16;
   const dotY = topPadding + (railHeight - topPadding - bottomPadding) * scrollRatio;
+  const isAdmin = ADMIN_SET.has(user.username);
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="mx-auto grid w-full max-w-[1550px] gap-5 lg:grid-cols-[320px_minmax(0,1fr)_188px]">
-        <Card className="p-5 lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:overflow-auto">
-          <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200/20">
-            <img src={LEFT_AVATAR} alt="avatar" className="h-48 w-full object-cover" />
-          </div>
+        <Card className="relative overflow-hidden p-5 lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:overflow-auto">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(244,114,182,0.18),transparent_52%),radial-gradient(circle_at_15%_85%,rgba(34,211,238,0.14),transparent_50%)]" />
+          <div className="relative space-y-4">
+            <div className="overflow-hidden rounded-2xl border border-slate-200/20">
+              <img src={LEFT_AVATAR} alt="avatar" className="h-48 w-full object-cover" />
+            </div>
 
-          <div className="space-y-3 text-sm text-slate-100/90">
-            <h1 className="bg-gradient-to-r from-rose-100 via-orange-100 to-cyan-100 bg-clip-text text-2xl font-bold text-transparent">
-              Kuromi Secret Base
-            </h1>
-            <p className="rounded-xl border border-slate-200/15 bg-slate-900/70 p-3">
-              当前用户: <span className="font-semibold text-cyan-100">{user.username}</span>
-            </p>
-            <p className="rounded-xl border border-slate-200/15 bg-slate-900/70 p-3">建站时间: 2026-03-08</p>
-            <p className="rounded-xl border border-slate-200/15 bg-slate-900/70 p-3">运行时间: {runtimeText}</p>
-            <p className="rounded-xl border border-slate-200/15 bg-slate-900/70 p-3">
-              我们没有注册功能，因为只有 RobinElysia 和 Meow 管理本站；访客模式可进入浏览与评论。
-            </p>
-          </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl text-slate-50">Kuromi Secret Base</h1>
+              <p className="text-sm text-slate-200/85">私人基地，无注册入口，仅 RobinElysia 与 Meow 可管理。</p>
+            </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            <Button onClick={onChangeWallpaper} variant="cyan" title="切换壁纸">
-              切换壁纸
-            </Button>
-            <Button onClick={onLogout} variant="rose" title="退出登录">
-              退出登录
-            </Button>
-          </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={isAdmin ? "rose" : "muted"} className={isAdmin ? "border-rose-200/50" : "border-slate-100/25"}>
+                {isAdmin ? "Admin" : "Visitor"}
+              </Badge>
+              <Badge className="border-cyan-200/35 bg-cyan-200/12 text-cyan-100">当前用户: {user.username}</Badge>
+            </div>
 
-          {ADMIN_SET.has(user.username) && (
-            <Button type="button" onClick={onOpenEditor} className="mt-3 w-full">
-              进入帖子编辑页
-            </Button>
-          )}
+            <Card className="rounded-2xl border-slate-100/15 bg-slate-900/45 p-4 shadow-none">
+              <div className="space-y-3 text-sm text-slate-100/90">
+                <p className="flex items-center gap-2">
+                  <CalendarClock size={16} className="text-cyan-100" /> 建站时间: 2026-03-08
+                </p>
+                <p className="flex items-center gap-2">
+                  <Clock3 size={16} className="text-cyan-100" /> 运行时间: {runtimeText}
+                </p>
+                <p className="leading-7 text-slate-200/80">
+                  站点公告: 欢迎来到 Kuromi Site。本站仍在迭代中，欢迎持续体验与反馈。
+                </p>
+              </div>
+            </Card>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <Button onClick={onChangeWallpaper} variant="cyan" title="切换壁纸">
+                切换壁纸
+              </Button>
+              <Button onClick={onLogout} variant="rose" title="退出登录">
+                退出登录
+              </Button>
+            </div>
+
+            {isAdmin && (
+              <Button type="button" onClick={onOpenEditor} className="w-full">
+                <Crown size={16} className="mr-2" /> 进入帖子编辑页
+              </Button>
+            )}
+          </div>
         </Card>
 
-        <main className="relative pl-8 sm:pl-12">
+        <main className="relative pl-6 sm:pl-12">
           <div className="pointer-events-none absolute bottom-0 left-2 top-0 w-[2px] rounded-full bg-gradient-to-b from-rose-300/80 via-cyan-200/65 to-cyan-300/35 shadow-[0_0_24px_rgba(34,211,238,0.35)] sm:left-4" />
           <div className="space-y-5">
             {filteredPosts.map((post) => (
               <article key={post.id} className="relative">
                 <div className="absolute left-2 top-7 h-3.5 w-3.5 -translate-x-1/2 rounded-full border border-white/60 bg-slate-50 shadow-[0_0_16px_rgba(255,255,255,0.7)] sm:left-4" />
-                <Card>
+                <Card className="overflow-hidden">
+                  <div className="h-1.5 bg-gradient-to-r from-rose-300/85 via-orange-300/75 to-cyan-300/85" />
                   <CardContent className="p-6">
-                    <div className="mb-4 flex items-center justify-between gap-3">
+                    <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-300 to-cyan-200 font-bold text-slate-900">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-300 to-cyan-200 font-bold text-slate-900">
                           {post.author.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <h3 className="font-medium text-slate-50">{resolvePostTitle(post)}</h3>
+                          <h3 className="text-lg text-slate-50">{resolvePostTitle(post)}</h3>
                           <p className="text-xs text-slate-300/70">
                             {post.author} · {formatDateTime(post.createdAt)}
                           </p>
                         </div>
                       </div>
                       <Button type="button" variant="cyan" size="sm" onClick={() => onOpenPost(post.id)}>
-                        查看详情
+                        <FileText size={14} className="mr-1.5" /> 查看详情
                       </Button>
                     </div>
 
@@ -252,7 +270,10 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
 
             {filteredPosts.length === 0 && (
               <Card className="py-14 text-center text-slate-200/75">
-                <p>没有匹配的帖子。</p>
+                <p className="mb-2 inline-flex items-center gap-2 text-base text-slate-100">
+                  <Sparkles size={16} className="text-cyan-200" /> 没有匹配的帖子
+                </p>
+                <p className="text-sm text-slate-300/75">可以尝试更换关键词，或回到主页查看全部。</p>
               </Card>
             )}
           </div>
@@ -265,7 +286,10 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
           <div className="mt-6 flex justify-center">
             <div ref={barRef} onPointerDown={handleBarPointerDown} className="relative w-12" role="presentation" style={{ height: `${railHeight}px` }}>
               <div className="absolute bottom-0 left-1/2 top-0 w-[3px] -translate-x-1/2 rounded-full bg-slate-200/20" />
-              <div className="absolute left-1/2 top-0 w-[3px] -translate-x-1/2 rounded-full bg-gradient-to-b from-rose-300/80 via-orange-200/70 to-cyan-300/85 shadow-[0_0_20px_rgba(251,113,133,0.48)]" style={{ height: `${dotY}px` }} />
+              <div
+                className="absolute left-1/2 top-0 w-[3px] -translate-x-1/2 rounded-full bg-gradient-to-b from-rose-300/80 via-orange-200/70 to-cyan-300/85 shadow-[0_0_20px_rgba(251,113,133,0.48)]"
+                style={{ height: `${dotY}px` }}
+              />
 
               {[0, 0.2, 0.4, 0.6, 0.8, 1].map((mark) => (
                 <button
