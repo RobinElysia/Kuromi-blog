@@ -174,9 +174,9 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="mx-auto grid w-full max-w-[1550px] gap-5 lg:grid-cols-[320px_minmax(0,1fr)_188px]">
-        <Card className="relative overflow-hidden p-5 lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:overflow-auto">
+        <Card className="relative overflow-hidden p-5 lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:overflow-auto lg:px-6 lg:py-7">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(244,114,182,0.18),transparent_52%),radial-gradient(circle_at_15%_85%,rgba(34,211,238,0.14),transparent_50%)]" />
-          <div className="relative space-y-4">
+          <div className="relative space-y-4 pt-2 sm:space-y-5 sm:pt-3 lg:space-y-6 lg:pt-5">
             <div className="overflow-hidden rounded-2xl border border-slate-200/20">
               <img src={LEFT_AVATAR} alt="avatar" className="h-48 w-full object-cover" />
             </div>
@@ -202,7 +202,8 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
                   <Clock3 size={16} className="text-cyan-100" /> 运行时间: {runtimeText}
                 </p>
                 <p className="leading-7 text-slate-200/80">
-                  站点公告: 欢迎来到 Kuromi Site。本站仍在迭代中，欢迎持续体验与反馈。
+                  站点公告: <br></br>
+                  欢迎来到 Kuromi Site。
                 </p>
               </div>
             </Card>

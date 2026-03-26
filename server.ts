@@ -1,14 +1,50 @@
-﻿import express from "express";
+import express from "express";
 import { createServer as createViteServer } from "vite";
 import { createClient } from "redis";
 import path from "path";
+import fs from "fs";
+import crypto from "crypto";
+import multer from "multer";
 
 const app = express();
 const PORT = 3000;
 const ADMIN_USERS = new Set(["RobinElysia", "Meow"]);
+const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+const ALLOWED_UPLOAD_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
+const uploadsRoot = path.join(process.cwd(), "public", "uploads", "posts");
+
+fs.mkdirSync(uploadsRoot, { recursive: true });
+
+const uploadStorage = multer.diskStorage({
+  destination: (_req, _file, callback) => {
+    callback(null, uploadsRoot);
+  },
+  filename: (_req, file, callback) => {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    const safeExt = ext && ext.length <= 10 ? ext : "";
+    const uid = `${Date.now()}-${crypto.randomUUID()}`;
+    callback(null, `${uid}${safeExt}`);
+  },
+});
+
+const upload = multer({
+  storage: uploadStorage,
+  limits: {
+    fileSize: UPLOAD_MAX_BYTES,
+    files: 1,
+  },
+  fileFilter: (_req, file, callback) => {
+    if (!ALLOWED_UPLOAD_MIME.has(file.mimetype)) {
+      callback(new Error("Unsupported image type"));
+      return;
+    }
+    callback(null, true);
+  },
+});
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads"), { maxAge: "7d" }));
 
 const redisClient = createClient({
   url: "redis://localhost:6379",
@@ -57,6 +93,35 @@ function normalizePostTags(rawTags: unknown): string[] {
 async function fetchAllPostsRaw() {
   return redisClient.lRange("kuromi:posts", 0, -1);
 }
+
+app.post("/api/uploads/images", (req, res) => {
+  const uploader = sanitizeAuthor(req.header("x-kuromi-user"));
+  if (!ADMIN_USERS.has(uploader)) {
+    return res.status(403).json({ error: "仅管理员可上传图片" });
+  }
+
+  upload.single("image")(req, res, (err) => {
+    if (err) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      if (message.includes("File too large")) {
+        return res.status(400).json({ error: "图片过大，单张请控制在 8MB 内" });
+      }
+      if (message.includes("Unsupported image type")) {
+        return res.status(400).json({ error: "仅支持 JPG、PNG、WEBP、GIF、AVIF" });
+      }
+      return res.status(400).json({ error: "图片上传失败" });
+    }
+
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: "未检测到图片文件" });
+    }
+
+    const safeName = encodeURIComponent(file.filename);
+    const url = `/uploads/posts/${safeName}`;
+    return res.json({ success: true, url, name: file.originalname || file.filename });
+  });
+});
 
 app.post("/api/login", (req, res) => {
   const username = String(req.body?.username ?? "").trim();

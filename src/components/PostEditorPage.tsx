@@ -22,17 +22,44 @@ function extractPostTitle(post: Post) {
   return fallback || "未命名帖子";
 }
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
 
 function normalizeMarkdown(value: string) {
   return value.replace(/\r\n/g, "\n");
+}
+
+function formatUnsupportedImageMessage() {
+  return "仅支持 JPG、PNG、WEBP、GIF、AVIF，且单图不超过 8MB";
+}
+
+async function uploadImageFile(file: File, uploader: string): Promise<{ url: string; alt: string; title: string }> {
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    throw new Error(formatUnsupportedImageMessage());
+  }
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
+    throw new Error("图片过大，单张请控制在 8MB 内");
+  }
+
+  const payload = new FormData();
+  payload.append("image", file);
+
+  const response = await fetch("/api/uploads/images", {
+    method: "POST",
+    headers: { "x-kuromi-user": uploader },
+    body: payload,
+  });
+
+  const data = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
+  if (!response.ok || !data.url) {
+    throw new Error(data.error || "图片上传失败");
+  }
+
+  return {
+    url: data.url,
+    alt: file.name,
+    title: file.name,
+  };
 }
 
 export default function PostEditorPage({ currentUser, search, onOpenPost }: PostEditorPageProps) {
@@ -132,17 +159,21 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
   };
 
   const handleInsertImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
 
     try {
-      const dataUrl = await fileToDataUrl(file);
-      const markdownImage = `\n![${file.name}](${dataUrl})\n`;
+      const uploaded: { url: string; alt: string }[] = [];
+      for (const file of files) {
+        const item = await uploadImageFile(file, currentUser.username);
+        uploaded.push({ url: item.url, alt: item.alt });
+      }
+      const markdownImage = uploaded.map((item) => `\n![${item.alt}](${item.url})\n`).join("");
       setContent((prev) => `${prev}${markdownImage}`);
-      setMessage("图片已插入文档");
+      setMessage(`已上传并插入 ${uploaded.length} 张图片`);
     } catch (err) {
       console.error("Failed to insert image:", err);
-      setMessage("图片插入失败");
+      setMessage(err instanceof Error ? err.message : "图片插入失败");
     } finally {
       event.target.value = "";
     }
@@ -285,7 +316,7 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
               <span className="inline-flex h-8 items-center justify-center whitespace-nowrap rounded-lg border border-slate-100/20 bg-slate-900/55 px-3 text-xs font-medium text-slate-100 transition hover:bg-slate-800/65">
                 插入图片
               </span>
-              <input type="file" accept="image/*" className="hidden" onChange={handleInsertImage} />
+              <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" className="hidden" multiple onChange={handleInsertImage} />
             </label>
             <Button type="button" onClick={handlePublish} disabled={loading}>
               {selectedId ? "更新发布" : "发布帖子"}
@@ -350,14 +381,12 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
               mode="split"
               placeholder="在这里编写 Markdown 内容，支持 LaTeX 与 Mermaid（```mermaid）。"
               uploadImages={async (files) => {
-                const uploaded = await Promise.all(
-                  files.map(async (file) => ({
-                    url: await fileToDataUrl(file),
-                    alt: file.name,
-                    title: file.name,
-                  }))
-                );
-                setMessage("图片已插入文档");
+                const uploaded: { url: string; alt: string; title: string }[] = [];
+                for (const file of files) {
+                  const item = await uploadImageFile(file, currentUser.username);
+                  uploaded.push(item);
+                }
+                setMessage(`已上传并插入 ${uploaded.length} 张图片`);
                 return uploaded;
               }}
               onChange={(nextValue) => {
@@ -368,6 +397,7 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
           <p className="text-xs text-slate-300/75">
             项目说明：本站无注册，仅 RobinElysia 与 Meow 拥有发帖管理权限；访客模式可浏览与评论。
           </p>
+          <p className="text-xs text-cyan-100/85">图片采用文件上传 URL 引用，不再写入 Base64，支持多图连续插入。</p>
           {message && <p className="text-xs text-orange-100">{message}</p>}
         </CardContent>
       </Card>
