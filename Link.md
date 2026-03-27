@@ -1,9 +1,9 @@
 [
   {
     name: 'RobinElysia',
-    avatar: '/assets/img/avatar-default.jpg',
+    avatar: '/src/public/img/RobinElysia.jpg',
     description: '全栈开发ing | 热爱技术与创新',
-    link: './AboutUs.html#关于robinelysia',
+    link: 'https://elysia.wiki:223/',
     tags: [
       { text: 'CS补天计划ing' },
       { text: 'Java全栈', color: 'green' },
@@ -12,7 +12,7 @@
   },
   {
     name: 'ICStudio',
-    avatar: '/assets/img/fengcheng.jpg',
+    avatar: '/src/public/img/fengcheng.jpg',
     description: '枫城 | React全栈',
     link: 'http://icstudio.top/',
     tags: [
@@ -22,7 +22,7 @@
   },
   {
     name: '叁玖',
-    avatar: '/assets/img/sanjiu.jpg',
+    avatar: '/src/public/img/sanjiu.jpg',
     description: '密码学/加密研究者 | 网络安全',
     link: 'www.sanjiuctf.cn',
     tags: [
@@ -32,7 +32,7 @@
   },
   {
     name: 'DLQC',
-    avatar: '/assets/img/DLQC.jpg',
+    avatar: '/src/public/img/DLQC.jpg',
     description: '努力学习ing',
     link: './AboutUs.html#关于dlqc',
     tags: [
@@ -62,7 +62,7 @@
   },
   {
     name: '蕾米 Remi Guan',
-    avatar: '/assets/img/Remi.jpg',
+    avatar: '/src/public/img/Remi.jpg',
     description: '全栈 | 蕾米',
     link: 'https://www.purpleplanen.top/Notes/%E6%91%98%E5%BD%95%E8%AF%AD%E5%8F%A5/remi.html',
     tags: [
@@ -72,7 +72,7 @@
   },
   {
     name: 'Riko',
-    avatar: '/assets/img/Riko.jpg',
+    avatar: '/src/public/img/Riko.jpg',
     description: '平面设计 | 转行ing',
     link: 'https://akiyamariko.github.io/Blog/',
     tags: [

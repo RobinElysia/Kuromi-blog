@@ -6,6 +6,7 @@ import LoadingScreen from "./components/LoadingScreen";
 import PostDetail from "./components/PostDetail";
 import TopNav from "./components/TopNav";
 import PostEditorPage from "./components/PostEditorPage";
+import Friends from "./components/Friends";
 import { User } from "./types";
 import { useGamepad } from "./hooks/useGamepad";
 
@@ -32,6 +33,7 @@ type AppRoute =
   | { type: "home" }
   | { type: "postDetail"; postId: number }
   | { type: "editor" }
+  | { type: "friends" }
   | { type: "placeholder"; title: string };
 
 function preloadImage(url: string) {
@@ -50,7 +52,7 @@ function resolveRoute(pathname: string): AppRoute {
   if (pathname === "/editor") return { type: "editor" };
   if (pathname === "/posts") return { type: "placeholder", title: "帖子页面" };
   if (pathname === "/tags") return { type: "placeholder", title: "标签页面" };
-  if (pathname === "/friends") return { type: "placeholder", title: "友链页面" };
+  if (pathname === "/friends") return { type: "friends" };
   return { type: "home" };
 }
 
@@ -191,6 +193,7 @@ export default function App() {
             <TopNav currentPath={currentPath} search={search} onSearchChange={setSearch} onNavigate={handleNavigate} />
             {route.type === "postDetail" && <PostDetail postId={route.postId} currentUser={user} onBack={() => handleNavigate("/")} />}
             {route.type === "editor" && <PostEditorPage currentUser={user} search={search} onOpenPost={handleOpenPost} />}
+            {route.type === "friends" && <Friends search={search} />}
             {route.type === "placeholder" && <PlaceholderPage title={route.title} />}
             {route.type === "home" && (
               <Home
