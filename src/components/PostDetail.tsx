@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import type { Post, User } from "../types";
 import MarkdownRenderer from "./MarkdownRenderer";
 import { Badge } from "./ui/badge";
@@ -7,11 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 const ILLUSTRATION = new URL("../public/kuromi/16x9/kv_krm.png", import.meta.url).href;
 const SIDE_IMAGE = new URL("../public/kuromi/1x1/illust_2.png", import.meta.url).href;
+const SIDE_ALT = new URL("../public/kuromi/16x9/PJL_10-1536x864.webp", import.meta.url).href;
 
 interface PostDetailProps {
   postId: number;
   currentUser: User;
   onBack: () => void;
+  onOpenTag: (tag: string) => void;
 }
 
 function formatTime(value: string) {
@@ -27,7 +30,7 @@ function resolvePostTitle(post: Post) {
   return fallback || "无标题帖子";
 }
 
-export default function PostDetail({ postId, currentUser, onBack }: PostDetailProps) {
+export default function PostDetail({ postId, currentUser, onBack, onOpenTag }: PostDetailProps) {
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -120,6 +123,14 @@ export default function PostDetail({ postId, currentUser, onBack }: PostDetailPr
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/72 via-slate-900/20 to-transparent" />
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-2 border-t border-slate-100/15 p-3">
+              {[SIDE_ALT, SIDE_IMAGE].map((item) => (
+                <div key={item} className="overflow-hidden rounded-xl border border-slate-100/15">
+                  <img src={item} alt="" aria-hidden="true" className="h-20 w-full object-cover" loading="lazy" />
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -139,25 +150,27 @@ export default function PostDetail({ postId, currentUser, onBack }: PostDetailPr
           </Card>
 
           <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
-            <Card>
-              <CardHeader className="pb-3">
-                <p className="text-xs tracking-[0.2em] text-slate-200/80">POST META</p>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-100/92">
-                <div className="rounded-2xl border border-slate-200/15 bg-slate-900/55 p-3">
-                  <p className="text-xs text-slate-300/75">帖子 ID</p>
-                  <p className="mt-1 font-medium text-cyan-100">{post.id}</p>
-                </div>
-                <div className="rounded-2xl border border-slate-200/15 bg-slate-900/55 p-3">
-                  <p className="text-xs text-slate-300/75">作者</p>
-                  <p className="mt-1 font-medium">{post.author}</p>
-                </div>
-                <div className="rounded-2xl border border-slate-200/15 bg-slate-900/55 p-3">
-                  <p className="text-xs text-slate-300/75">发布时间</p>
-                  <p className="mt-1 font-medium">{formatTime(post.createdAt)}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+              <Card>
+                <CardHeader className="pb-3">
+                  <p className="text-xs tracking-[0.2em] text-slate-200/80">POST META</p>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-slate-100/92">
+                  <div className="rounded-2xl border border-slate-200/15 bg-slate-900/55 p-3">
+                    <p className="text-xs text-slate-300/75">帖子 ID</p>
+                    <p className="mt-1 font-medium text-cyan-100">{post.id}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/15 bg-slate-900/55 p-3">
+                    <p className="text-xs text-slate-300/75">作者</p>
+                    <p className="mt-1 font-medium">{post.author}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200/15 bg-slate-900/55 p-3">
+                    <p className="text-xs text-slate-300/75">发布时间</p>
+                    <p className="mt-1 font-medium">{formatTime(post.createdAt)}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             <Card>
               <CardHeader className="pb-3">
@@ -165,7 +178,9 @@ export default function PostDetail({ postId, currentUser, onBack }: PostDetailPr
               </CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 {tags.map((tag) => (
-                  <Badge key={tag}>#{tag}</Badge>
+                  <button key={tag} type="button" onClick={() => onOpenTag(tag)} className="rounded-full transition hover:-translate-y-0.5">
+                    <Badge>#{tag}</Badge>
+                  </button>
                 ))}
                 {tags.length === 0 && <Badge variant="muted">#未分类</Badge>}
               </CardContent>

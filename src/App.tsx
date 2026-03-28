@@ -1,4 +1,5 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Login from "./components/Login";
 import Home from "./components/Home";
 import EasterEggModal from "./components/EasterEggModal";
@@ -7,6 +8,7 @@ import PostDetail from "./components/PostDetail";
 import TopNav from "./components/TopNav";
 import PostEditorPage from "./components/PostEditorPage";
 import Friends from "./components/Friends";
+import TagsPage from "./components/TagsPage";
 import { User } from "./types";
 import { useGamepad } from "./hooks/useGamepad";
 
@@ -34,7 +36,7 @@ type AppRoute =
   | { type: "postDetail"; postId: number }
   | { type: "editor" }
   | { type: "friends" }
-  | { type: "placeholder"; title: string };
+  | { type: "tags" };
 
 function preloadImage(url: string) {
   const img = new Image();
@@ -50,23 +52,9 @@ function resolveRoute(pathname: string): AppRoute {
   }
 
   if (pathname === "/editor") return { type: "editor" };
-  if (pathname === "/posts") return { type: "placeholder", title: "帖子页面" };
-  if (pathname === "/tags") return { type: "placeholder", title: "标签页面" };
+  if (pathname === "/tags") return { type: "tags" };
   if (pathname === "/friends") return { type: "friends" };
   return { type: "home" };
-}
-
-function PlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="mx-auto min-h-[50vh] w-full max-w-4xl p-6 sm:p-10">
-      <div className="rounded-3xl border border-slate-100/20 bg-slate-950/70 p-8 text-center backdrop-blur-md">
-        <h2 className="bg-gradient-to-r from-rose-100 via-orange-100 to-cyan-100 bg-clip-text text-3xl font-semibold text-transparent">
-          {title}
-        </h2>
-        <p className="mt-3 text-sm text-slate-200/80">该页面将于下一轮继续实现，当前先完成导航结构。</p>
-      </div>
-    </div>
-  );
 }
 
 export default function App() {
@@ -76,6 +64,7 @@ export default function App() {
   const [showInitialLoading, setShowInitialLoading] = useState(false);
   const [isMobileAspect, setIsMobileAspect] = useState(() => window.innerWidth <= window.innerHeight);
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
+  const [currentQuery, setCurrentQuery] = useState(() => window.location.search);
   const [search, setSearch] = useState("");
 
   const wallpapers = useMemo(() => (isMobileAspect ? MOBILE_WALLPAPERS : DESKTOP_WALLPAPERS), [isMobileAspect]);
@@ -105,7 +94,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const onPopState = () => setCurrentPath(window.location.pathname);
+    const onPopState = () => {
+      setCurrentPath(window.location.pathname);
+      setCurrentQuery(window.location.search);
+    };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
@@ -128,8 +120,11 @@ export default function App() {
   }, [wallpaperIndex, wallpapers]);
 
   const handleNavigate = useCallback((path: string) => {
-    window.history.pushState({}, "", path);
-    setCurrentPath(path);
+    const url = new URL(path, window.location.origin);
+    const fullPath = `${url.pathname}${url.search}`;
+    window.history.pushState({}, "", fullPath);
+    setCurrentPath(url.pathname);
+    setCurrentQuery(url.search);
   }, []);
 
   const handleLogin = (newUser: User) => {
@@ -164,6 +159,7 @@ export default function App() {
 
   const activeWallpaper = wallpapers[wallpaperIndex % wallpapers.length];
   const route = resolveRoute(currentPath);
+  const routeKey = `${currentPath}${currentQuery}`;
 
   return (
     <div
@@ -191,20 +187,32 @@ export default function App() {
         ) : (
           <>
             <TopNav currentPath={currentPath} search={search} onSearchChange={setSearch} onNavigate={handleNavigate} />
-            {route.type === "postDetail" && <PostDetail postId={route.postId} currentUser={user} onBack={() => handleNavigate("/")} />}
-            {route.type === "editor" && <PostEditorPage currentUser={user} search={search} onOpenPost={handleOpenPost} />}
-            {route.type === "friends" && <Friends search={search} />}
-            {route.type === "placeholder" && <PlaceholderPage title={route.title} />}
-            {route.type === "home" && (
-              <Home
-                user={user}
-                search={search}
-                onLogout={handleLogout}
-                onChangeWallpaper={handleChangeWallpaper}
-                onOpenPost={handleOpenPost}
-                onOpenEditor={() => handleNavigate("/editor")}
-              />
-            )}
+            <AnimatePresence mode="wait">
+              <motion.div key={routeKey} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.22 }}>
+                {route.type === "postDetail" && (
+                  <PostDetail
+                    postId={route.postId}
+                    currentUser={user}
+                    onBack={() => handleNavigate("/")}
+                    onOpenTag={(tag) => handleNavigate(`/tags?tag=${encodeURIComponent(tag)}`)}
+                  />
+                )}
+                {route.type === "editor" && <PostEditorPage currentUser={user} search={search} onOpenPost={handleOpenPost} />}
+                {route.type === "friends" && <Friends search={search} />}
+                {route.type === "tags" && <TagsPage search={search} queryString={currentQuery} onNavigate={handleNavigate} onOpenPost={handleOpenPost} />}
+                {route.type === "home" && (
+                  <Home
+                    user={user}
+                    search={search}
+                    onLogout={handleLogout}
+                    onChangeWallpaper={handleChangeWallpaper}
+                    onOpenPost={handleOpenPost}
+                    onOpenEditor={() => handleNavigate("/editor")}
+                    onOpenTag={(tag) => handleNavigate(`/tags?tag=${encodeURIComponent(tag)}`)}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </>
         )}
       </div>

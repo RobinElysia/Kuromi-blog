@@ -1,45 +1,51 @@
-import React from "react";
+﻿import React from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Button } from "./ui/button";
+import { Card, CardContent } from "./ui/card";
 
 interface EasterEggModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const HEART_KUROMI = new URL("../public/kuromi/1x1/gotop_3.png", import.meta.url).href;
+
 export default function EasterEggModal({ isOpen, onClose }: EasterEggModalProps) {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
-      <div className="relative w-full max-w-sm overflow-hidden rounded-3xl border-2 border-pink-500 bg-zinc-900 shadow-[0_0_50px_rgba(236,72,153,0.6)]">
-        <div className="absolute left-0 top-0 h-3 w-full bg-gradient-to-r from-purple-600 via-pink-500 to-purple-600" />
-
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 z-10 rounded-full bg-black/50 p-2 text-pink-300 transition-colors hover:bg-pink-500/20"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-md"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
         >
-          ✕
-        </button>
+          <motion.div initial={{ opacity: 0, y: 16, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.97 }}>
+            <Card className="relative w-full max-w-sm overflow-hidden border-rose-200/40 bg-slate-950/85">
+              <div className="absolute left-0 top-0 h-1.5 w-full bg-gradient-to-r from-rose-300/85 via-orange-300/75 to-cyan-300/85" />
 
-        <div className="p-8 pt-12 text-center">
-          <div className="mx-auto mb-6 flex h-24 w-24 animate-pulse items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-pink-500 shadow-[0_0_30px_rgba(236,72,153,0.8)]">
-            <span className="text-4xl text-white">❤</span>
-          </div>
+              <CardContent className="p-8 pt-10 text-center">
+                <motion.img
+                  src={HEART_KUROMI}
+                  alt=""
+                  aria-hidden="true"
+                  className="mx-auto mb-5 h-24 w-24"
+                  animate={{ y: [0, -8, 0], rotate: [0, 3, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                />
 
-          <h2 className="mb-4 bg-gradient-to-r from-pink-400 to-purple-300 bg-clip-text font-serif text-2xl font-bold text-transparent">
-            惊喜彩蛋
-          </h2>
+                <h2 className="mb-4 bg-gradient-to-r from-rose-200 via-orange-100 to-cyan-100 bg-clip-text text-2xl font-bold text-transparent">惊喜彩蛋</h2>
 
-          <p className="text-lg font-medium leading-relaxed text-pink-100">
-            我喜欢你，比昨天多一点，比明天少一点。
-          </p>
+                <p className="text-lg font-medium leading-relaxed text-rose-100">我喜欢你，比昨天多一点，比明天少一点。</p>
 
-          <div className="mt-8 flex justify-center gap-2">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-pink-500" />
-            <span className="h-2 w-2 animate-pulse rounded-full bg-purple-500 [animation-delay:0.2s]" />
-            <span className="h-2 w-2 animate-pulse rounded-full bg-pink-500 [animation-delay:0.4s]" />
-          </div>
-        </div>
-      </div>
-    </div>
+                <Button type="button" onClick={onClose} variant="ghost" className="mt-7 w-full border-slate-100/20">
+                  关闭
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

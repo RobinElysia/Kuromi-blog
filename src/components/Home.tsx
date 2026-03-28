@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { CalendarClock, Clock3, Crown, FileText, Sparkles } from "lucide-react";
 import { User, Post } from "../types";
 import { Button } from "./ui/button";
@@ -12,10 +13,14 @@ interface HomeProps {
   onChangeWallpaper: () => void;
   onOpenPost: (postId: number) => void;
   onOpenEditor: () => void;
+  onOpenTag: (tag: string) => void;
 }
 
 const SITE_STARTED_AT = new Date("2026-03-08T00:00:00+08:00");
 const LEFT_AVATAR = new URL("../public/kuromi/1x1/illust_1.png", import.meta.url).href;
+const RIGHT_STICKER = new URL("../public/kuromi/1x1/gotop_2.png", import.meta.url).href;
+const HEADER_RIBBON = new URL("../public/kuromi/marquee_1.svg", import.meta.url).href;
+const POST_BANNER = new URL("../public/kuromi/16x9/bg_about.png", import.meta.url).href;
 const ADMIN_SET = new Set(["RobinElysia", "Meow"]);
 
 function formatDateTime(value: string) {
@@ -59,7 +64,7 @@ function toExcerpt(content: string, maxLength = 200) {
   return `${plain.slice(0, maxLength)}...`;
 }
 
-export default function Home({ user, search, onLogout, onChangeWallpaper, onOpenPost, onOpenEditor }: HomeProps) {
+export default function Home({ user, search, onLogout, onChangeWallpaper, onOpenPost, onOpenEditor, onOpenTag }: HomeProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [runtimeText, setRuntimeText] = useState(() => formatRuntime(new Date()));
   const [scrollRatio, setScrollRatio] = useState(0);
@@ -173,6 +178,17 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto mb-5 w-full max-w-[1550px] overflow-hidden rounded-1xl border-slate-100/15">
+        <motion.img
+          src={HEADER_RIBBON}
+          alt=""
+          aria-hidden="true"
+          className="w-full h-auto opacity-90"
+          animate={{ x: [0, -22, 0] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+        />
+      </div>
+
       <div className="mx-auto grid w-full max-w-[1550px] gap-5 lg:grid-cols-[320px_minmax(0,1fr)_188px]">
         <Card className="relative overflow-hidden p-5 lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)] lg:overflow-auto lg:px-6 lg:py-7">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(244,114,182,0.18),transparent_52%),radial-gradient(circle_at_15%_85%,rgba(34,211,238,0.14),transparent_50%)]" />
@@ -227,9 +243,14 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
 
         <main className="relative pl-6 sm:pl-12">
           <div className="pointer-events-none absolute bottom-0 left-2 top-0 w-[2px] rounded-full bg-gradient-to-b from-rose-300/80 via-cyan-200/65 to-cyan-300/35 shadow-[0_0_24px_rgba(34,211,238,0.35)] sm:left-4" />
+
+          <div className="mb-5 overflow-hidden rounded-2xl border border-slate-100/15">
+            <img src={POST_BANNER} alt="" aria-hidden="true" className="h-24 w-full object-cover object-center opacity-75 sm:h-28" loading="lazy" decoding="async" />
+          </div>
+
           <div className="space-y-5">
-            {filteredPosts.map((post) => (
-              <article key={post.id} className="relative">
+            {filteredPosts.map((post, index) => (
+              <motion.article key={post.id} className="relative" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: index * 0.02 }}>
                 <div className="absolute left-2 top-7 h-3.5 w-3.5 -translate-x-1/2 rounded-full border border-white/60 bg-slate-50 shadow-[0_0_16px_rgba(255,255,255,0.7)] sm:left-4" />
                 <Card className="overflow-hidden">
                   <div className="h-1.5 bg-gradient-to-r from-rose-300/85 via-orange-300/75 to-cyan-300/85" />
@@ -253,7 +274,15 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
 
                     <div className="mb-3 flex flex-wrap gap-2">
                       {(post.tags ?? []).map((tag) => (
-                        <Badge key={`${post.id}-${tag}`}>#{tag}</Badge>
+                        <button
+                          key={`${post.id}-${tag}`}
+                          type="button"
+                          onClick={() => onOpenTag(tag)}
+                          className="rounded-full transition hover:-translate-y-0.5"
+                          aria-label={`查看标签 ${tag}`}
+                        >
+                          <Badge>#{tag}</Badge>
+                        </button>
                       ))}
                       {(post.tags ?? []).length === 0 && <Badge variant="muted">#未分类</Badge>}
                     </div>
@@ -266,7 +295,7 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
                     </p>
                   </CardContent>
                 </Card>
-              </article>
+              </motion.article>
             ))}
 
             {filteredPosts.length === 0 && (
@@ -281,6 +310,15 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
         </main>
 
         <aside className="p-2 lg:sticky lg:top-24 lg:h-[calc(100vh-7rem)]">
+          <motion.img
+            src={RIGHT_STICKER}
+            alt=""
+            aria-hidden="true"
+            className="mx-auto mb-4 h-20 w-20"
+            animate={{ y: [0, -7, 0], rotate: [0, 2, 0] }}
+            transition={{ duration: 3.8, repeat: Infinity, ease: "easeInOut" }}
+          />
+
           <p className="text-center text-xs tracking-[0.24em] text-slate-100/90">LINE SCROLL</p>
           <p className="mt-2 text-center text-xs text-slate-200/85">拖拽光点或点击刻度快速跳转页面</p>
 
@@ -317,7 +355,7 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
                   }
                 }}
                 aria-label="页面滚动控制点"
-                className={`absolute left-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 bg-white/35 shadow-[0_0_30px_rgba(255,255,255,0.46)] backdrop-blur-xl outline-none transition ${
+                className={`absolute left-1/2 z-10 h-7 w-7 -translate-x-1/2 -translate-y-1/2 transform-gpu rounded-full border border-white/70 bg-white/35 shadow-[0_0_30px_rgba(255,255,255,0.46)] backdrop-blur-xl outline-none transition ${
                   isDraggingDot ? "scale-110" : "acrylic-dot"
                 }`}
                 style={{ top: `${dotY}px` }}

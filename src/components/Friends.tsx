@@ -1,4 +1,5 @@
 ﻿import React, { useMemo } from "react";
+import { motion } from "framer-motion";
 import { ExternalLink, Link2, Users2 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -23,6 +24,10 @@ interface FriendItem {
 
 const KUROMI_SIDE = new URL("../public/kuromi/1x1/illust_2.png", import.meta.url).href;
 const KUROMI_MARK = new URL("../public/kuromi/1x1/logo_gradient_en.svg", import.meta.url).href;
+const BG_ABOUT = new URL("../public/kuromi/16x9/bg_about.png", import.meta.url).href;
+const BG_MUSIC = new URL("../public/kuromi/16x9/bg_music.png", import.meta.url).href;
+const STAR_3 = new URL("../public/kuromi/1x1/gotop_3.png", import.meta.url).href;
+const PJL_POSTER = new URL("../public/kuromi/1x1/PJL_01-1536x1536.jpg", import.meta.url).href;
 
 const LOCAL_AVATARS = {
   robin: new URL("../public/img/RobinElysia.jpg", import.meta.url).href,
@@ -66,16 +71,6 @@ const FRIENDS: FriendItem[] = [
     ],
   },
   {
-    name: "DLQC",
-    avatar: LOCAL_AVATARS.dlqc,
-    description: "努力学习ing",
-    link: "./AboutUs.html#关于dlqc",
-    tags: [
-      { text: "C/C++" },
-      { text: "网络安全", color: "green" },
-    ],
-  },
-  {
     name: "Marisa",
     avatar: "https://pica.zhimg.com/466406875631534fc5629e5c75a58a7a_xll.jpg?source=32738c0c&needBackground=1",
     description: "雾雨魔法店 CEO | 魔理沙",
@@ -93,6 +88,16 @@ const FRIENDS: FriendItem[] = [
     tags: [
       { text: "前端", color: "purple" },
       { text: "UI/UX" },
+    ],
+  },
+  {
+    name: "DLQC",
+    avatar: LOCAL_AVATARS.dlqc,
+    description: "努力学习ing",
+    link: "./AboutUs.html#关于dlqc",
+    tags: [
+      { text: "C/C++" },
+      { text: "网络安全", color: "green" },
     ],
   },
   {
@@ -199,62 +204,80 @@ export default function Friends({ search }: FriendsProps) {
               <Badge className="border-cyan-200/40 bg-cyan-200/12 text-cyan-100">共 {FRIENDS.length} 位友链伙伴</Badge>
               <Badge variant="rose" className="border-rose-200/45 bg-rose-200/12">保留当前站点配色与背景层</Badge>
             </div>
+
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {[BG_ABOUT, BG_MUSIC, PJL_POSTER].map((item) => (
+                <div key={item} className="overflow-hidden rounded-xl border border-slate-100/15">
+                  <img src={item} alt="" aria-hidden="true" className="h-16 w-full object-cover sm:h-20" loading="lazy" decoding="async" />
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="relative mx-auto h-40 w-full max-w-[280px] overflow-hidden rounded-3xl border border-slate-100/20 sm:h-48">
             <img src={KUROMI_SIDE} alt="Kuromi" className="h-full w-full object-cover object-center" loading="lazy" decoding="async" />
             <img src={KUROMI_MARK} alt="" aria-hidden="true" className="absolute bottom-3 right-3 h-10 w-10 opacity-80" loading="lazy" decoding="async" />
+            <motion.img
+              src={STAR_3}
+              alt=""
+              aria-hidden="true"
+              className="absolute left-3 top-3 h-12 w-12"
+              animate={{ y: [0, -5, 0], rotate: [0, -2, 0] }}
+              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+            />
           </div>
         </CardContent>
       </Card>
 
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((friend) => {
+        {filtered.map((friend, index) => {
           const href = normalizeHref(friend.link);
           const external = /^https?:\/\//i.test(href);
 
           return (
-            <Card key={friend.name} className="group relative overflow-hidden border-slate-100/18 bg-slate-950/70 transition hover:-translate-y-0.5 hover:border-cyan-200/35">
-              <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-300/80 via-orange-300/70 to-cyan-300/80" />
-              <CardContent className="p-5">
-                <div className="flex items-start gap-3">
-                  <img
-                    src={friend.avatar}
-                    alt={`${friend.name} avatar`}
-                    className="h-14 w-14 rounded-2xl border border-slate-100/25 object-cover"
-                    loading="lazy"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                  />
+            <motion.div key={friend.name} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22, delay: index * 0.02 }}>
+              <Card className="group relative overflow-hidden border-slate-100/18 bg-slate-950/70 transition hover:-translate-y-0.5 hover:border-cyan-200/35">
+                <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-300/80 via-orange-300/70 to-cyan-300/80" />
+                <CardContent className="p-5">
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={friend.avatar}
+                      alt={`${friend.name} avatar`}
+                      className="h-14 w-14 rounded-2xl border border-slate-100/25 object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                    />
 
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-lg text-slate-50">{friend.name}</h3>
-                    <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-200/85">{friend.description}</p>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {friend.tags.map((tag, index) => (
-                    <Badge key={`${friend.name}-${index}-${tag.text}`} className={tagClass(tag.color)}>
-                      {tag.text}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="mt-4 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs text-slate-300/75">
-                    <Link2 size={13} />
-                    <span className="max-w-[190px] truncate">{href}</span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-lg text-slate-50">{friend.name}</h3>
+                      <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-200/85">{friend.description}</p>
+                    </div>
                   </div>
 
-                  <a href={href} target={external ? "_blank" : undefined} rel={external ? "noreferrer noopener" : undefined}>
-                    <Button type="button" variant="cyan" size="sm">
-                      访问 <ExternalLink size={13} className="ml-1.5" />
-                    </Button>
-                  </a>
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {friend.tags.map((tag, tagIndex) => (
+                      <Badge key={`${friend.name}-${tagIndex}-${tag.text}`} className={tagClass(tag.color)}>
+                        {tag.text}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs text-slate-300/75">
+                      <Link2 size={13} />
+                      <span className="max-w-[190px] truncate">{href}</span>
+                    </div>
+
+                    <a href={href} target={external ? "_blank" : undefined} rel={external ? "noreferrer noopener" : undefined}>
+                      <Button type="button" variant="cyan" size="sm">
+                        访问 <ExternalLink size={13} className="ml-1.5" />
+                      </Button>
+                    </a>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           );
         })}
       </div>

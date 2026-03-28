@@ -404,3 +404,4 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
     </div>
   );
 }
+
