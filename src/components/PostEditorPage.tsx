@@ -338,14 +338,14 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
                   <button
                     type="button"
                     onClick={() => removeTag(tag)}
-                    aria-label={`删除标签 ${tag}`}
+                    aria-label={`删除trails ${tag}`}
                     className="rounded-full px-1 text-cyan-50/85 hover:bg-cyan-200/20"
                   >
                     x
                   </button>
                 </Badge>
               ))}
-              {tags.length === 0 && <span className="text-xs text-slate-300/70">暂无标签</span>}
+              {tags.length === 0 && <span className="text-xs text-slate-300/70">暂无trails</span>}
             </div>
             <Input
               value={tagInput}
@@ -365,8 +365,8 @@ export default function PostEditorPage({ currentUser, search, onOpenPost }: Post
                 addTag(tagInput);
                 setTagInput("");
               }}
-              placeholder="输入标签后按 Enter，例如：Diary"
-              aria-label="帖子标签输入"
+              placeholder="输入trails后按 Enter，例如：Diary"
+              aria-label="帖子trails输入"
               className="h-9"
             />
           </div>

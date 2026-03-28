@@ -279,7 +279,7 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
                           type="button"
                           onClick={() => onOpenTag(tag)}
                           className="rounded-full transition hover:-translate-y-0.5"
-                          aria-label={`查看标签 ${tag}`}
+                          aria-label={`查看trails ${tag}`}
                         >
                           <Badge>#{tag}</Badge>
                         </button>
@@ -303,7 +303,7 @@ export default function Home({ user, search, onLogout, onChangeWallpaper, onOpen
                 <p className="mb-2 inline-flex items-center gap-2 text-base text-slate-100">
                   <Sparkles size={16} className="text-cyan-200" /> 没有匹配的帖子
                 </p>
-                <p className="text-sm text-slate-300/75">可以尝试更换关键词，或回到主页查看全部。</p>
+                <p className="text-sm text-slate-300/75">可以尝试更换关键词，或回到Home查看全部。</p>
               </Card>
             )}
           </div>

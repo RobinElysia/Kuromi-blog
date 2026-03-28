@@ -80,7 +80,7 @@ export default function PostDetail({ postId, currentUser, onBack, onOpenTag }: P
         <Card className="mx-auto max-w-2xl p-6 text-center sm:p-8">
           <p className="text-rose-200">{error || "帖子不存在"}</p>
           <Button type="button" onClick={onBack} variant="cyan" className="mt-5">
-            返回主页
+            返回Home
           </Button>
         </Card>
       </div>
@@ -140,7 +140,7 @@ export default function PostDetail({ postId, currentUser, onBack, onOpenTag }: P
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-xs tracking-[0.2em] text-cyan-100/80">ARTICLE</p>
                 <Button type="button" onClick={onBack} variant="cyan">
-                  返回主页
+                  返回Home
                 </Button>
               </div>
             </CardHeader>

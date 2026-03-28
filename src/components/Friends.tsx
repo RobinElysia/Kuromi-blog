@@ -201,7 +201,7 @@ export default function Friends({ search }: FriendsProps) {
               本站无注册入口，仅 RobinElysia 与 Meow 管理；访客模式可浏览。这里整理了朋友的站点，欢迎互访。
             </p>
             <div className="flex flex-wrap gap-2">
-              <Badge className="border-cyan-200/40 bg-cyan-200/12 text-cyan-100">共 {FRIENDS.length} 位友链伙伴</Badge>
+              <Badge className="border-cyan-200/40 bg-cyan-200/12 text-cyan-100">共 {FRIENDS.length} 位link伙伴</Badge>
               <Badge variant="rose" className="border-rose-200/45 bg-rose-200/12">保留当前站点配色与背景层</Badge>
             </div>
 
@@ -284,7 +284,7 @@ export default function Friends({ search }: FriendsProps) {
 
       {filtered.length === 0 && (
         <Card className="mt-5 border-slate-100/18 py-10 text-center text-slate-200/80">
-          <p className="text-sm">当前搜索词没有匹配到友链，请尝试其他关键词。</p>
+          <p className="text-sm">当前搜索词没有匹配到link，请尝试其他关键词。</p>
         </Card>
       )}
     </section>

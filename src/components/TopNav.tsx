@@ -15,9 +15,9 @@ interface TopNavProps {
 }
 
 const NAV_ITEMS = [
-  { label: "主页", path: "/" },
-  { label: "标签", path: "/tags" },
-  { label: "友链", path: "/friends" },
+  { label: "Home", path: "/" },
+  { label: "trails", path: "/tags" },
+  { label: "link", path: "/friends" },
 ];
 
 function isActive(currentPath: string, targetPath: string) {
